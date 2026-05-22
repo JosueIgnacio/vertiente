@@ -171,7 +171,7 @@ function Hero() {
               {/* Etiqueta punto equilibrio */}
               <rect x="316" y="20" width="104" height="20" rx="5" fill="#FEF9C3" />
               <text x="368" y="33" textAnchor="middle" fontSize="9.5" fill="#92400E" fontWeight="600">
-                ◆ punto de equilibrio
+                punto de equilibrio
               </text>
 
               {/* Dot inicio eléctrico */}
@@ -202,8 +202,10 @@ function Hero() {
                 Eléctrico
               </span>
               <span className="flex items-center gap-1.5 ml-auto text-[#92400E]">
-                <span className="text-[#FACC15]">◆</span>
-                Desde aquí, solo ahorras
+                <svg width="20" height="10" className="inline-block shrink-0">
+                  <line x1="0" y1="5" x2="20" y2="5" stroke="#FACC15" strokeWidth="2" strokeDasharray="4 2" />
+                </svg>
+                Punto de equilibrio
               </span>
             </div>
           </div>
