@@ -16,7 +16,6 @@ import Navbar from '../components/layout/Navbar';
 import Footer from '../components/layout/Footer';
 import Container from '../components/layout/Container';
 import Card from '../components/ui/Card';
-import Button from '../components/ui/Button';
 import Badge from '../components/ui/Badge';
 
 const PASOS = [
