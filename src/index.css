@@ -1,0 +1,43 @@
+@import "tailwindcss";
+
+@theme {
+  /* Colores de marca vertiente */
+  --color-verde-profundo: #0F3D2E;
+  --color-verde-principal: #16A34A;
+  --color-verde-medio: #15803D;
+  --color-verde-claro: #DCFCE7;
+  --color-verde-suave: #F0FDF4;
+  --color-amarillo: #FACC15;
+  --color-amarillo-suave: #FEF9C3;
+
+  /* Grises */
+  --color-gris-oscuro: #111827;
+  --color-gris-medio: #374151;
+  --color-gris-suave: #6B7280;
+  --color-gris-borde: #E5E7EB;
+  --color-gris-fondo: #F9FAFB;
+
+  /* Tipografía */
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: "Inter", ui-sans-serif, system-ui, sans-serif;
+  color: #111827;
+  background-color: #ffffff;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  margin: 0;
+}
+
+#root {
+  min-height: 100vh;
+}
