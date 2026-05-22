@@ -210,6 +210,15 @@ function Hero() {
             </div>
           </div>
 
+          {/* Disclaimer */}
+          <p className="text-center text-[11px] text-[#9CA3AF] mt-4 px-2">
+            Gráfico demostrativo con valores ilustrativos.{' '}
+            <Link to="/simulador" className="text-[#16A34A] hover:underline font-medium">
+              Ingresa tus datos
+            </Link>{' '}
+            para obtener tu análisis personalizado.
+          </p>
+
           {/* Glow */}
           <div
             aria-hidden
