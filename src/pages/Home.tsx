@@ -78,49 +78,136 @@ function Hero() {
           </div>
         </div>
 
-        {/* Dashboard preview card */}
+        {/* TCO preview chart */}
         <div className="mt-16 max-w-2xl mx-auto relative">
-          <div className="bg-[#F9FAFB] rounded-3xl border border-[#E5E7EB] p-6 shadow-[0_8px_32px_0_rgba(0,0,0,0.07)]">
-            <div className="flex items-center gap-2 mb-4">
-              <div className="w-3 h-3 rounded-full bg-red-400" />
-              <div className="w-3 h-3 rounded-full bg-yellow-400" />
-              <div className="w-3 h-3 rounded-full bg-green-400" />
-              <span className="ml-2 text-xs text-[#9CA3AF]">vertiente — resultado simulación</span>
+          <div className="bg-white rounded-3xl border border-[#E5E7EB] p-6 shadow-[0_8px_32px_0_rgba(0,0,0,0.07)]">
+            {/* Header */}
+            <div className="flex items-center justify-between mb-1">
+              <p className="text-sm font-semibold text-[#111827]">Costo acumulado en el tiempo</p>
+              <span className="text-xs text-[#9CA3AF]">combustión vs. eléctrico</span>
             </div>
-            {/* Mini stat mockup */}
-            <div className="grid grid-cols-3 gap-3 mb-4">
+            <p className="text-xs text-[#9CA3AF] mb-5">
+              El eléctrico parte más alto, cruza la línea y desde ahí solo ahorra.
+            </p>
+
+            {/* SVG chart mock — conceptual, no son datos del usuario */}
+            <svg
+              viewBox="0 0 480 210"
+              className="w-full"
+              aria-label="Gráfico comparativo de costo acumulado: combustión vs eléctrico"
+            >
+              <defs>
+                {/* Relleno verde para zona de ahorro post-equilibrio */}
+                <linearGradient id="savingsFade" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#16A34A" stopOpacity="0.12" />
+                  <stop offset="100%" stopColor="#16A34A" stopOpacity="0.03" />
+                </linearGradient>
+              </defs>
+
+              {/* Grid lines horizontales */}
+              {[40, 80, 120, 160].map((y) => (
+                <line key={y} x1="44" y1={y} x2="464" y2={y} stroke="#F3F4F6" strokeWidth="1" />
+              ))}
+
+              {/* Y axis labels — costo relativo, sin números absolutos */}
               {[
-                { label: 'Ahorro mensual', value: '$43.125', color: 'text-[#15803D]' },
-                { label: 'Ahorro 5 años', value: '$2.587.500', color: 'text-[#0F3D2E]' },
-                { label: 'Punto de equilibrio', value: '3,2 años', color: 'text-[#374151]' },
-              ].map((s) => (
-                <div key={s.label} className="bg-white rounded-xl p-3 border border-[#E5E7EB]">
-                  <p className="text-[10px] text-[#9CA3AF] uppercase tracking-wider mb-1">{s.label}</p>
-                  <p className={`text-base font-bold ${s.color}`}>{s.value}</p>
-                </div>
+                { y: 40,  label: 'Alto' },
+                { y: 120, label: 'Medio' },
+                { y: 160, label: 'Bajo'  },
+              ].map(({ y, label }) => (
+                <text key={y} x="38" y={y + 4} textAnchor="end" fontSize="9" fill="#D1D5DB">{label}</text>
               ))}
-            </div>
-            {/* Mini chart bars */}
-            <div className="h-24 flex items-end gap-1 px-2">
-              {[40, 55, 62, 70, 76, 82, 87, 90, 93, 95, 97, 98].map((h, i) => (
-                <div key={i} className="flex-1 flex flex-col gap-0.5 items-center">
-                  <div
-                    className="w-full rounded-t-sm"
-                    style={{
-                      height: `${h * 0.9}%`,
-                      background: i < 4 ? '#9CA3AF' : '#16A34A',
-                      opacity: 0.7 + i * 0.02,
-                    }}
-                  />
-                </div>
+
+              {/* X axis labels */}
+              {[
+                { x: 44,  label: 'Mes 1'  },
+                { x: 200, label: 'Mes 24' },
+                { x: 310, label: 'Mes 36' },
+                { x: 464, label: 'Mes 60' },
+              ].map(({ x, label }) => (
+                <text key={x} x={x} y="200" textAnchor="middle" fontSize="9" fill="#9CA3AF">{label}</text>
               ))}
-            </div>
-            <div className="mt-2 flex items-center justify-between text-[10px] text-[#9CA3AF] px-2">
-              <span>Mes 1</span>
-              <span className="text-[#FACC15] font-semibold">◆ Punto equilibrio</span>
-              <span>Mes 60</span>
+
+              {/* ── Combustión: empieza más barata (menor inversión inicial)
+                    pero sube más rápido (mayores costos mensuales).
+                    En SVG: y pequeño = arriba = más caro acumulado. ── */}
+              <polyline
+                points="44,162 120,142 200,116 310,85 390,62 464,44"
+                fill="none"
+                stroke="#9CA3AF"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+
+              {/* ── Eléctrico: empieza más caro (inversión vehicular mayor)
+                    pero sube más lento (menores costos operacionales).
+                    Cruza combustión ~mes 36, y termina por DEBAJO (más barato). ── */}
+              <polyline
+                points="44,106 120,100 200,94 310,85 390,79 464,72"
+                fill="none"
+                stroke="#16A34A"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+
+              {/* Zona de ahorro: área entre ambas líneas DESPUÉS del cruce
+                  Combustión (arriba/pequeño y) vs Eléctrico (abajo/grande y) */}
+              <polygon
+                points="310,85 390,62 464,44 464,72 390,79 310,85"
+                fill="url(#savingsFade)"
+                stroke="none"
+              />
+
+              {/* Línea vertical punteada en el cruce (~mes 36) */}
+              <line
+                x1="310" y1="32" x2="310" y2="178"
+                stroke="#FACC15"
+                strokeWidth="1.5"
+                strokeDasharray="4 3"
+              />
+
+              {/* Etiqueta punto equilibrio */}
+              <rect x="316" y="20" width="104" height="20" rx="5" fill="#FEF9C3" />
+              <text x="368" y="33" textAnchor="middle" fontSize="9.5" fill="#92400E" fontWeight="600">
+                ◆ punto de equilibrio
+              </text>
+
+              {/* Dot inicio eléctrico */}
+              <circle cx="44" cy="106" r="4" fill="white" stroke="#16A34A" strokeWidth="2" />
+              {/* Dot inicio combustión */}
+              <circle cx="44" cy="162" r="4" fill="white" stroke="#9CA3AF" strokeWidth="2" />
+
+              {/* Etiqueta final eléctrico */}
+              <rect x="466" y="63" width="8" height="8" rx="2" fill="#16A34A" opacity="0.15" />
+
+              {/* Flecha / texto "aquí ahorras" en zona verde */}
+              <text x="420" y="58" textAnchor="middle" fontSize="8.5" fill="#15803D" fontWeight="600">
+                zona de
+              </text>
+              <text x="420" y="68" textAnchor="middle" fontSize="8.5" fill="#15803D" fontWeight="600">
+                ahorro
+              </text>
+            </svg>
+
+            {/* Leyenda */}
+            <div className="flex items-center gap-6 mt-3 text-xs text-[#6B7280]">
+              <span className="flex items-center gap-1.5">
+                <span className="w-5 h-0.5 bg-[#9CA3AF] inline-block rounded" />
+                Combustión
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="w-5 h-0.5 bg-[#16A34A] inline-block rounded" />
+                Eléctrico
+              </span>
+              <span className="flex items-center gap-1.5 ml-auto text-[#92400E]">
+                <span className="text-[#FACC15]">◆</span>
+                Desde aquí, solo ahorras
+              </span>
             </div>
           </div>
+
           {/* Glow */}
           <div
             aria-hidden
