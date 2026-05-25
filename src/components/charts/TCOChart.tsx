@@ -29,7 +29,8 @@ const CustomTooltip = ({ active, payload, label }: any) => {
         <p className="font-semibold text-[#374151] mb-2">Mes {label}</p>
         {payload.map((entry: any) => (
           <p key={entry.name} style={{ color: entry.color }} className="font-medium">
-            {entry.name}: {formatCLP(entry.value)}
+            {entry.name === 'combustion' ? 'Combustión' : 'Eléctrico'}:{' '}
+            {formatCLP(entry.value)}
           </p>
         ))}
       </div>
@@ -39,14 +40,13 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 };
 
 export default function TCOChart({ result }: TCOChartProps) {
-  // Merge the two series into one array for Recharts
   const data: ChartDataPoint[] = result.serieCombustion.map((c, i) => ({
     mes: c.mes,
     combustion: Math.round(c.costo),
     electrico: Math.round(result.serieElectrico[i].costo),
   }));
 
-  // Find crossover month
+  // Mes en que la curva eléctrica cruza la de combustión
   const crossoverMes = data.find((d) => d.electrico <= d.combustion)?.mes;
 
   const yFormatter = (value: number) => {
@@ -56,7 +56,7 @@ export default function TCOChart({ result }: TCOChartProps) {
   };
 
   return (
-    <ResponsiveContainer width="100%" height={320}>
+    <ResponsiveContainer width="100%" height={300}>
       <LineChart data={data} margin={{ top: 8, right: 16, left: 8, bottom: 8 }}>
         <CartesianGrid strokeDasharray="3 3" stroke="#F3F4F6" />
         <XAxis
@@ -76,12 +76,9 @@ export default function TCOChart({ result }: TCOChartProps) {
         <Tooltip content={<CustomTooltip />} />
         <Legend
           wrapperStyle={{ paddingTop: 12, fontSize: 12, fontWeight: 500 }}
-          formatter={(value) =>
-            value === 'combustion' ? 'Combustión' : 'Eléctrico'
-          }
+          formatter={(value) => (value === 'combustion' ? 'Combustión' : 'Eléctrico')}
         />
 
-        {/* Crossover reference line */}
         {crossoverMes && (
           <ReferenceLine
             x={crossoverMes}
@@ -100,7 +97,6 @@ export default function TCOChart({ result }: TCOChartProps) {
         <Line
           type="monotone"
           dataKey="combustion"
-          name="combustion"
           stroke="#6B7280"
           strokeWidth={2.5}
           dot={false}
@@ -109,7 +105,6 @@ export default function TCOChart({ result }: TCOChartProps) {
         <Line
           type="monotone"
           dataKey="electrico"
-          name="electrico"
           stroke="#16A34A"
           strokeWidth={2.5}
           dot={false}

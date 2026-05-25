@@ -1,4 +1,5 @@
-import type { SemaforoEstado } from '../../types';
+// Tipo local — ya no se exporta desde types (flujo nuevo no usa semáforo)
+type SemaforoEstado = 'conviene' | 'conviene-condiciones' | 'no-conviene';
 
 interface SemaforoProps {
   estado: SemaforoEstado;
