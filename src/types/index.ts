@@ -1,47 +1,39 @@
-export type TipoUsuario = 'persona' | 'empresa';
+// ── Flujo persona natural (diagnóstico gratuito) ──────────────────────────────
 
-export type UsoPrincipal = 'diario' | 'trabajo' | 'reparto' | 'taxi-app' | 'pyme';
+export type UsoPrincipal = 'cotidiano' | 'taxi-app' | 'flota-pyme';
 
-export type TipoCarga = 'casa' | 'edificio' | 'empresa' | 'publica';
-
-export type SemaforoEstado = 'conviene' | 'conviene-condiciones' | 'no-conviene';
-
-export interface SimuladorData {
-  // Paso 1: Uso
-  tipoUsuario: TipoUsuario;
-  kmMensuales: number;
+/** Datos que el usuario ingresa en el formulario simplificado */
+export interface DiagnosticoData {
+  kmDia: number;
   ciudad: string;
   usoPrincipal: UsoPrincipal;
-
-  // Paso 2: Vehículo actual
-  gastoMensualCombustible: number;
   rendimientoKmL: number;
-  mantencionMensual: number;
-
-  // Paso 3: Alternativa eléctrica
-  modeloEVId: string;
-  precioEV: number;
-  consumoKmKwh: number;
-  tipoCarga: TipoCarga;
-
-  // Paso 4: Infraestructura
-  tieneEstacionamiento: boolean;
-  interesaCargador: boolean;
+  mantencionAnual: number; // $/año del auto actual
 }
 
+/** Mix de carga asignado automáticamente según km/día */
+export interface MixCarga {
+  pctCasa: number;   // 0–1
+  pctPublica: number; // 0–1
+  precioKwhEfectivo: number;
+}
+
+/** Resultado del cálculo TCO */
 export interface TCOResult {
+  kmMes: number;
   costoCombustibleMes: number;
+  mantencionCombustionMes: number;
   costoEnergiaEVMes: number;
   ahorroOperacionalMes: number;
   ahorroA5Anios: number;
-  inversionIncremental: number;
+  inversionNetaEV: number;       // precioEVEstandar - reventaCombustion
   puntoEquilibrioAnios: number;
-  semaforoEstado: SemaforoEstado;
+  mixCarga: MixCarga;
   serieCombustion: { mes: number; costo: number }[];
   serieElectrico: { mes: number; costo: number }[];
-  mensajeDinamico: string;
 }
 
+// ── Modelos EV (para sección pyme / referencia) ───────────────────────────────
 export interface EVModel {
   id: string;
   nombre: string;

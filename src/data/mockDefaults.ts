@@ -1,9 +1,9 @@
-// ──────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
 // Valores de ejemplo a calibrar (supuestos demo)
-// ──────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
 
 /** Precio bencina 95 en Chile ($/litro) */
-export const PRECIO_BENCINA = 1250;
+export const PRECIO_BENCINA = 1_250;
 
 /** Precio electricidad carga domiciliaria ($/kWh) */
 export const PRECIO_ELECTRICIDAD_CASA = 250;
@@ -11,45 +11,30 @@ export const PRECIO_ELECTRICIDAD_CASA = 250;
 /** Precio electricidad carga pública ($/kWh) */
 export const PRECIO_ELECTRICIDAD_PUBLICA = 450;
 
-/** Rendimiento auto combustión promedio (km/litro) */
-export const RENDIMIENTO_BENCINA_KM_L = 12;
+/** Precio VE estándar usado en el diagnóstico (no lo elige el usuario) */
+export const PRECIO_EV_ESTANDAR = 20_000_000;
 
-/** Consumo VE promedio (km/kWh) */
-export const CONSUMO_EV_KM_KWH = 6.5;
+/** Consumo VE estándar (km/kWh) */
+export const CONSUMO_EV_KM_KWH = 6;
 
-/** Mantención mensual promedio auto combustión ($) */
-export const MANTENCION_BENCINA_MES = 45_000;
+/** Valor de reventa estimado del auto a combustión ($) */
+export const REVENTA_COMBUSTION = 8_000_000;
 
-/** Mantención mensual promedio VE ($) */
-export const MANTENCION_EV_MES = 18_000;
+/** Mantención mensual estándar del VE ($/mes) */
+export const MANTENCION_EV_MENSUAL = 18_000;
 
-/** Precio VE referencial por defecto ($) */
-export const PRECIO_EV_REFERENCIAL = 23_000_000;
+/** Días por mes usados en el cálculo */
+export const DIAS_POR_MES = 30;
 
-/** Kilómetros mensuales por defecto */
-export const KM_MENSUALES_DEFAULT = 1_500;
+// ─────────────────────────────────────────────────────────────────────────────
+// Defaults del formulario de diagnóstico (persona natural)
+// ─────────────────────────────────────────────────────────────────────────────
+import type { DiagnosticoData } from '../types';
 
-/** Valor estimado auto actual (usado para calcular inversión incremental) */
-export const VALOR_AUTO_ACTUAL_DEFAULT = 8_000_000;
-
-import type { SimuladorData } from '../types';
-
-/** Datos precargados para la demo */
-export const SIMULADOR_DEFAULTS: SimuladorData = {
-  tipoUsuario: 'persona',
-  kmMensuales: KM_MENSUALES_DEFAULT,
+export const DIAGNOSTICO_DEFAULTS: DiagnosticoData = {
+  kmDia: 50,
   ciudad: 'Santiago',
-  usoPrincipal: 'diario',
-
-  gastoMensualCombustible: 156_250, // ~1500 km / 12 km/L * $1250
-  rendimientoKmL: RENDIMIENTO_BENCINA_KM_L,
-  mantencionMensual: MANTENCION_BENCINA_MES,
-
-  modeloEVId: 'byd-dolphin',
-  precioEV: 19_990_000,
-  consumoKmKwh: 6.5,
-  tipoCarga: 'casa',
-
-  tieneEstacionamiento: true,
-  interesaCargador: true,
+  usoPrincipal: 'cotidiano',
+  rendimientoKmL: 12,
+  mantencionAnual: 540_000, // $45.000/mes × 12
 };

@@ -1,124 +1,99 @@
-import type { SimuladorData, TCOResult, SemaforoEstado } from '../types';
+import type { DiagnosticoData, TCOResult, MixCarga } from '../types';
 import {
   PRECIO_BENCINA,
   PRECIO_ELECTRICIDAD_CASA,
   PRECIO_ELECTRICIDAD_PUBLICA,
-  MANTENCION_BENCINA_MES,
-  MANTENCION_EV_MES,
-  VALOR_AUTO_ACTUAL_DEFAULT,
+  PRECIO_EV_ESTANDAR,
+  CONSUMO_EV_KM_KWH,
+  REVENTA_COMBUSTION,
+  MANTENCION_EV_MENSUAL,
+  DIAS_POR_MES,
 } from '../data/mockDefaults';
-import { formatCLP, formatAnios } from './format';
 
 /**
- * Función pura de cálculo de Costo Total de Operación (TCO).
- * Recibe los datos del simulador y retorna el resultado completo.
+ * Determina el mix de carga automáticamente según los km/día.
+ * El usuario no elige; se asigna según su perfil de uso.
  */
-export function calcularTCO(data: SimuladorData): TCOResult {
-  const {
-    kmMensuales,
-    rendimientoKmL,
-    gastoMensualCombustible,
-    mantencionMensual,
-    precioEV,
-    consumoKmKwh,
-    tipoCarga,
-  } = data;
+export function calcularMixCarga(kmDia: number): MixCarga {
+  let pctCasa: number;
+  let pctPublica: number;
 
-  // ── Costos mensuales ────────────────────────────────────────────────────────
+  if (kmDia < 100) {
+    pctCasa = 1.0;
+    pctPublica = 0.0;
+  } else if (kmDia < 200) {
+    pctCasa = 0.7;
+    pctPublica = 0.3;
+  } else {
+    pctCasa = 0.5;
+    pctPublica = 0.5;
+  }
 
-  // Usamos el gasto declarado si es mayor a 0, sino calculamos desde rendimiento
-  const costoCombustibleMes =
-    gastoMensualCombustible > 0
-      ? gastoMensualCombustible
-      : (kmMensuales / rendimientoKmL) * PRECIO_BENCINA;
+  const precioKwhEfectivo =
+    pctCasa * PRECIO_ELECTRICIDAD_CASA + pctPublica * PRECIO_ELECTRICIDAD_PUBLICA;
 
-  const precioKwh =
-    tipoCarga === 'publica'
-      ? PRECIO_ELECTRICIDAD_PUBLICA
-      : PRECIO_ELECTRICIDAD_CASA;
+  return { pctCasa, pctPublica, precioKwhEfectivo };
+}
 
-  const costoEnergiaEVMes = (kmMensuales / consumoKmKwh) * precioKwh;
+/**
+ * Función pura de cálculo TCO para el diagnóstico de persona natural.
+ * No emite veredictos ni semáforos: solo calcula y devuelve los números.
+ */
+export function calcularTCO(data: DiagnosticoData): TCOResult {
+  const { kmDia, rendimientoKmL, mantencionAnual } = data;
 
-  // Mantención: usamos la declarada para combustión; EV tiene mantención fija referencial
-  const mantencionCombustionMes = mantencionMensual > 0 ? mantencionMensual : MANTENCION_BENCINA_MES;
-  const mantencionEVMes = MANTENCION_EV_MES;
+  // ── Kilómetros mensuales ────────────────────────────────────────────────────
+  const kmMes = kmDia * DIAS_POR_MES;
 
-  const costoTotalCombustionMes = costoCombustibleMes + mantencionCombustionMes;
-  const costoTotalEVMes = costoEnergiaEVMes + mantencionEVMes;
+  // ── Costos combustión ────────────────────────────────────────────────────────
+  const costoCombustibleMes = (kmMes / rendimientoKmL) * PRECIO_BENCINA;
+  const mantencionCombustionMes = mantencionAnual / 12;
 
-  // ── Ahorro ──────────────────────────────────────────────────────────────────
+  // ── Mix y costo energía EV ──────────────────────────────────────────────────
+  const mixCarga = calcularMixCarga(kmDia);
+  const costoEnergiaEVMes = (kmMes / CONSUMO_EV_KM_KWH) * mixCarga.precioKwhEfectivo;
 
-  const ahorroOperacionalMes = costoTotalCombustionMes - costoTotalEVMes;
+  // ── Ahorro operacional ──────────────────────────────────────────────────────
+  const ahorroOperacionalMes =
+    (costoCombustibleMes + mantencionCombustionMes) -
+    (costoEnergiaEVMes + MANTENCION_EV_MENSUAL);
+
   const ahorroA5Anios = ahorroOperacionalMes * 60; // 60 meses
 
-  // ── Inversión incremental ───────────────────────────────────────────────────
-  // Supuesto: el usuario ya tiene auto; inversión incremental = precio EV - valor auto actual
-  const inversionIncremental = Math.max(precioEV - VALOR_AUTO_ACTUAL_DEFAULT, precioEV * 0.4);
+  // ── Inversión neta ──────────────────────────────────────────────────────────
+  // Se descuenta la reventa del auto a combustión actual
+  const inversionNetaEV = PRECIO_EV_ESTANDAR - REVENTA_COMBUSTION; // $12.000.000
 
   // ── Punto de equilibrio ─────────────────────────────────────────────────────
   const ahorroAnual = ahorroOperacionalMes * 12;
   const puntoEquilibrioAnios =
-    ahorroAnual > 0 ? inversionIncremental / ahorroAnual : 99;
+    ahorroAnual > 0 ? inversionNetaEV / ahorroAnual : 99;
 
-  // ── Series para gráfico (60 meses) ─────────────────────────────────────────
-  // Costo acumulado: inversión inicial + costos operacionales mes a mes
+  // ── Series para el gráfico (60 meses) ────────────────────────────────────
+  // Combustión: parte en $0 (el usuario ya tiene el auto) + costos operacionales
+  // Eléctrico:  parte en inversionNetaEV + costos operacionales acumulados
+  const costoOpCombustionMes = costoCombustibleMes + mantencionCombustionMes;
+  const costoOpEVMes = costoEnergiaEVMes + MANTENCION_EV_MENSUAL;
+
   const serieCombustion: { mes: number; costo: number }[] = [];
   const serieElectrico: { mes: number; costo: number }[] = [];
 
-  // Combustión: inversión = valor auto actual (ya la tiene); para el gráfico
-  // usamos solo el costo operacional acumulado desde 0 para claridad visual
-  // Eléctrico: parte desde la inversión incremental y va bajando la diferencia
-  const inversionMostrada = inversionIncremental;
-
   for (let mes = 1; mes <= 60; mes++) {
-    serieCombustion.push({
-      mes,
-      costo: costoTotalCombustionMes * mes,
-    });
-    serieElectrico.push({
-      mes,
-      costo: inversionMostrada + costoTotalEVMes * mes,
-    });
-  }
-
-  // ── Semáforo ────────────────────────────────────────────────────────────────
-  let semaforoEstado: SemaforoEstado;
-
-  if (puntoEquilibrioAnios <= 4 && tipoCarga !== 'publica') {
-    semaforoEstado = 'conviene';
-  } else if (puntoEquilibrioAnios > 7 || (tipoCarga === 'publica' && kmMensuales < 1200)) {
-    semaforoEstado = 'no-conviene';
-  } else {
-    semaforoEstado = 'conviene-condiciones';
-  }
-
-  // ── Mensaje dinámico ────────────────────────────────────────────────────────
-  const cargaLabel =
-    tipoCarga === 'casa' ? 'en domicilio'
-    : tipoCarga === 'empresa' ? 'en tu empresa'
-    : tipoCarga === 'edificio' ? 'en tu edificio'
-    : 'en carga pública';
-
-  let mensajeDinamico = '';
-
-  if (semaforoEstado === 'conviene') {
-    mensajeDinamico = `En tu caso, el cambio a eléctrico podría generar un ahorro estimado de ${formatCLP(ahorroOperacionalMes)} mensuales. El punto de equilibrio se alcanza en ${formatAnios(puntoEquilibrioAnios)}, cargando principalmente ${cargaLabel}. Es una decisión que financieramente tiene sentido.`;
-  } else if (semaforoEstado === 'conviene-condiciones') {
-    mensajeDinamico = `El cambio podría ahorrarte ${formatCLP(ahorroOperacionalMes)} al mes, pero el punto de equilibrio está en ${formatAnios(puntoEquilibrioAnios)}. Conviene si resuelves la factibilidad de carga ${cargaLabel} y tienes horizonte de uso de al menos 5 años.`;
-  } else {
-    mensajeDinamico = `Con tu perfil actual (${kmMensuales.toLocaleString('es-CL')} km/mes, carga ${cargaLabel}), el punto de equilibrio sería de ${formatAnios(puntoEquilibrioAnios)}. Por ahora el cambio no es conveniente, pero puede mejorar si aumentas el uso o resuelves carga domiciliaria.`;
+    serieCombustion.push({ mes, costo: costoOpCombustionMes * mes });
+    serieElectrico.push({ mes, costo: inversionNetaEV + costoOpEVMes * mes });
   }
 
   return {
+    kmMes,
     costoCombustibleMes,
+    mantencionCombustionMes,
     costoEnergiaEVMes,
     ahorroOperacionalMes,
     ahorroA5Anios,
-    inversionIncremental,
+    inversionNetaEV,
     puntoEquilibrioAnios,
-    semaforoEstado,
+    mixCarga,
     serieCombustion,
     serieElectrico,
-    mensajeDinamico,
   };
 }
