@@ -37,7 +37,8 @@ export default function Navbar() {
           {/* CTA */}
           <Link to="/simulador">
             <Button size="sm" variant="primary">
-              Realiza tu diagnóstico
+              <span className="sm:hidden">Diagnóstico</span>
+              <span className="hidden sm:inline">Realiza tu diagnóstico</span>
             </Button>
           </Link>
         </nav>

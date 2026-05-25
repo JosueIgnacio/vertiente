@@ -79,8 +79,8 @@ function Hero() {
         </div>
 
         {/* TCO preview chart */}
-        <div className="mt-16 max-w-2xl mx-auto relative">
-          <div className="bg-white rounded-3xl border border-[#E5E7EB] p-6 shadow-[0_8px_32px_0_rgba(0,0,0,0.07)]">
+        <div className="mt-16 max-w-2xl mx-auto relative w-full">
+          <div className="bg-white rounded-3xl border border-[#E5E7EB] p-6 shadow-[0_8px_32px_0_rgba(0,0,0,0.07)] overflow-hidden">
             {/* Header */}
             <div className="flex items-center justify-between mb-1">
               <p className="text-sm font-semibold text-[#111827]">Costo acumulado en el tiempo</p>
@@ -192,7 +192,7 @@ function Hero() {
             </svg>
 
             {/* Leyenda */}
-            <div className="flex items-center gap-6 mt-3 text-xs text-[#6B7280]">
+            <div className="flex flex-wrap items-center gap-x-6 gap-y-2 mt-3 text-xs text-[#6B7280]">
               <span className="flex items-center gap-1.5">
                 <span className="w-5 h-0.5 bg-[#9CA3AF] inline-block rounded" />
                 Combustión
@@ -201,7 +201,7 @@ function Hero() {
                 <span className="w-5 h-0.5 bg-[#16A34A] inline-block rounded" />
                 Eléctrico
               </span>
-              <span className="flex items-center gap-1.5 ml-auto text-[#92400E]">
+              <span className="flex items-center gap-1.5 text-[#92400E]">
                 <svg width="20" height="10" className="inline-block shrink-0">
                   <line x1="0" y1="5" x2="20" y2="5" stroke="#FACC15" strokeWidth="2" strokeDasharray="4 2" />
                 </svg>

@@ -9,7 +9,7 @@ export default function Footer() {
         <div className="py-12 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-8">
           {/* Brand */}
           <div className="flex flex-col gap-2">
-            <Logo size="md" className="[&>span]:!text-white [&>span:first-child]:!text-[#FACC15]" />
+            <Logo size="md" variant="dark" />
             <p className="text-sm text-white/60 max-w-xs">
               electromovilidad sin chamullo
             </p>

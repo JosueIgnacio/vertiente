@@ -180,20 +180,26 @@ function SeccionCarga({ result, kmDia }: { result: ReturnType<typeof calcularTCO
       </div>
 
       {/* Mix visual */}
-      <div className="flex gap-3 mb-4">
+      <div className="grid grid-cols-3 gap-3 mb-4">
         <div className="flex-1 bg-[#F0FDF4] rounded-xl p-4 border border-[#DCFCE7] text-center">
           <p className="text-2xl font-bold text-[#16A34A]">{Math.round(pctCasa * 100)}%</p>
           <p className="text-xs text-[#6B7280] mt-1">Carga domiciliaria</p>
           <p className="text-[10px] text-[#9CA3AF]">$250/kWh</p>
         </div>
-        {pctPublica > 0 && (
-          <div className="flex-1 bg-[#F9FAFB] rounded-xl p-4 border border-[#E5E7EB] text-center">
+        {pctPublica > 0 ? (
+          <div className="bg-[#F9FAFB] rounded-xl p-4 border border-[#E5E7EB] text-center">
             <p className="text-2xl font-bold text-[#374151]">{Math.round(pctPublica * 100)}%</p>
             <p className="text-xs text-[#6B7280] mt-1">Carga pública</p>
             <p className="text-[10px] text-[#9CA3AF]">$450/kWh</p>
           </div>
+        ) : (
+          <div className="bg-[#F9FAFB] rounded-xl p-4 border border-[#E5E7EB] text-center opacity-30">
+            <p className="text-2xl font-bold text-[#374151]">0%</p>
+            <p className="text-xs text-[#6B7280] mt-1">Carga pública</p>
+            <p className="text-[10px] text-[#9CA3AF]">No necesaria</p>
+          </div>
         )}
-        <div className="flex-1 bg-[#FFF7ED] rounded-xl p-4 border border-[#FED7AA] text-center">
+        <div className="bg-[#FFF7ED] rounded-xl p-4 border border-[#FED7AA] text-center">
           <p className="text-2xl font-bold text-[#92400E]">
             {formatCLP(precioKwhEfectivo)}
           </p>
@@ -218,9 +224,9 @@ function SeccionCarga({ result, kmDia }: { result: ReturnType<typeof calcularTCO
 function SeccionGrafico({ result }: { result: ReturnType<typeof calcularTCO> }) {
   return (
     <Card padding="lg">
-      <div className="flex items-center justify-between mb-1">
+      <div className="flex items-start justify-between mb-1 gap-2">
         <h2 className="font-semibold text-[#111827]">Costo acumulado a 60 meses</h2>
-        <span className="text-xs text-[#9CA3AF]">Combustión vs. Eléctrico</span>
+        <span className="hidden sm:block text-xs text-[#9CA3AF] shrink-0">Combustión vs. Eléctrico</span>
       </div>
       <p className="text-xs text-[#9CA3AF] mb-2">
         La curva eléctrica parte en{' '}
@@ -229,7 +235,7 @@ function SeccionGrafico({ result }: { result: ReturnType<typeof calcularTCO> }) 
         estimada de tu auto a combustión ({formatCLPMillon(REVENTA_COMBUSTION)}).
       </p>
       <TCOChart result={result} />
-      <div className="flex flex-wrap gap-4 mt-3 text-xs text-[#9CA3AF]">
+      <div className="flex flex-col sm:flex-row flex-wrap gap-2 sm:gap-4 mt-3 text-xs text-[#9CA3AF]">
         <span className="flex items-center gap-1.5">
           <span className="w-3 h-0.5 bg-[#9CA3AF] inline-block" /> Combustión: costo operacional acumulado (sin inversión inicial)
         </span>
