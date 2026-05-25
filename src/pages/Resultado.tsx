@@ -483,7 +483,7 @@ export default function Resultado() {
                   Tu diagnóstico
                 </Badge>
                 <span className="text-xs text-[#9CA3AF]">
-                  {simData.ciudad} · {simData.kmDia} km/día · {usoLabel}
+                  {simData.region} · {simData.kmDia} km/día · {usoLabel}
                 </span>
               </div>
               <h1 className="text-2xl sm:text-3xl font-bold text-[#0F3D2E]">

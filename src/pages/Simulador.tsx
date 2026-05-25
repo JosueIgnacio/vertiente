@@ -165,20 +165,29 @@ export default function Simulador() {
                 />
               </div>
 
-              {/* Ciudad */}
+              {/* Región */}
               <div>
-                <FieldLabel>Ciudad y región de operación</FieldLabel>
+                <FieldLabel>Región de operación</FieldLabel>
                 <SelectInput
-                  value={data.ciudad}
-                  onChange={(v) => set({ ciudad: v })}
+                  value={data.region}
+                  onChange={(v) => set({ region: v })}
                   options={[
-                    { value: 'Santiago', label: 'Santiago (Región Metropolitana)' },
-                    { value: 'Valparaíso', label: 'Valparaíso / Viña del Mar' },
-                    { value: 'Concepción', label: 'Concepción / Biobío' },
-                    { value: 'La Serena', label: 'La Serena / Coquimbo' },
-                    { value: 'Temuco', label: 'Temuco / Araucanía' },
-                    { value: 'Antofagasta', label: 'Antofagasta' },
-                    { value: 'Otra', label: 'Otra ciudad' },
+                    { value: 'Arica y Parinacota',       label: 'Región de Arica y Parinacota' },
+                    { value: 'Tarapacá',                  label: 'Región de Tarapacá' },
+                    { value: 'Antofagasta',               label: 'Región de Antofagasta' },
+                    { value: 'Atacama',                   label: 'Región de Atacama' },
+                    { value: 'Coquimbo',                  label: 'Región de Coquimbo' },
+                    { value: 'Valparaíso',                label: 'Región de Valparaíso' },
+                    { value: 'Metropolitana de Santiago', label: 'Región Metropolitana de Santiago' },
+                    { value: "O'Higgins",                 label: "Región del Libertador Gral. B. O'Higgins" },
+                    { value: 'Maule',                     label: 'Región del Maule' },
+                    { value: 'Ñuble',                     label: 'Región de Ñuble' },
+                    { value: 'Biobío',                    label: 'Región del Biobío' },
+                    { value: 'La Araucanía',              label: 'Región de La Araucanía' },
+                    { value: 'Los Ríos',                  label: 'Región de Los Ríos' },
+                    { value: 'Los Lagos',                 label: 'Región de Los Lagos' },
+                    { value: 'Aysén',                     label: 'Región de Aysén' },
+                    { value: 'Magallanes',                label: 'Región de Magallanes' },
                   ]}
                 />
               </div>

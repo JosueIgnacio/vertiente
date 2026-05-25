@@ -33,7 +33,7 @@ import type { DiagnosticoData } from '../types';
 
 export const DIAGNOSTICO_DEFAULTS: DiagnosticoData = {
   kmDia: 50,
-  ciudad: 'Santiago',
+  region: 'Metropolitana de Santiago',
   usoPrincipal: 'cotidiano',
   rendimientoKmL: 12,
   mantencionAnual: 540_000, // $45.000/mes × 12

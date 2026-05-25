@@ -5,7 +5,7 @@ export type UsoPrincipal = 'cotidiano' | 'taxi-app' | 'flota-pyme';
 /** Datos que el usuario ingresa en el formulario simplificado */
 export interface DiagnosticoData {
   kmDia: number;
-  ciudad: string;
+  region: string;
   usoPrincipal: UsoPrincipal;
   rendimientoKmL: number;
   mantencionAnual: number; // $/año del auto actual
