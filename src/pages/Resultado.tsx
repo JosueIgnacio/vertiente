@@ -22,13 +22,13 @@ import type { DiagnosticoData } from '../types';
 
 function loadData(): DiagnosticoData {
   try {
-    const raw = localStorage.getItem('vertiente_diagnostico');
+    const raw = localStorage.getItem('evmarket_diagnostico');
     if (raw) return JSON.parse(raw) as DiagnosticoData;
   } catch (_) { /* noop */ }
   return DIAGNOSTICO_DEFAULTS;
 }
 
-const REGISTERED_KEY = 'vertiente_registered';
+const REGISTERED_KEY = 'evmarket_registered';
 
 // ── Modal de registro ─────────────────────────────────────────────────────────
 
@@ -66,7 +66,7 @@ function ModalRegistro({ onClose, onSuccess }: { onClose: () => void; onSuccess:
         {/* Header */}
         <div className="flex items-center gap-2 mb-1">
           <Zap className="w-5 h-5 text-[#16A34A]" />
-          <span className="font-bold text-[#0F3D2E] text-lg">vertiente</span>
+          <span className="font-bold text-[#0F3D2E] text-lg">evmarket</span>
         </div>
         <h2 className="text-xl font-bold text-[#111827] mb-1">
           Crea tu cuenta gratis

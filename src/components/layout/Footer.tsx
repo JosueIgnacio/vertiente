@@ -11,7 +11,7 @@ export default function Footer() {
           <div className="flex flex-col gap-2">
             <Logo size="md" variant="dark" />
             <p className="text-sm text-white/60 max-w-xs">
-              electromovilidad sin chamullo
+              tu camino a la electromovilidad
             </p>
           </div>
 
@@ -31,7 +31,7 @@ export default function Footer() {
 
         <div className="border-t border-white/10 py-4">
           <p className="text-xs text-white/40 text-center">
-            © 2025 vertiente · Datos referenciales, no constituyen asesoría financiera
+            © 2025 evmarket · Datos referenciales, no constituyen asesoría financiera
           </p>
         </div>
       </Container>

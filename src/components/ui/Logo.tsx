@@ -1,7 +1,7 @@
 interface LogoProps {
   size?: 'sm' | 'md' | 'lg';
   className?: string;
-  /** 'dark' inverts colors for dark backgrounds: ve → amarillo, rtiente → blanco */
+  /** 'dark' inverts colors for dark backgrounds: ev → amarillo, market → blanco */
   variant?: 'light' | 'dark';
 }
 
@@ -20,8 +20,8 @@ export default function Logo({ size = 'md', className = '', variant = 'light' }:
       className={`font-semibold tracking-wide select-none ${sizeMap[size]} ${className}`}
       style={{ letterSpacing: '0.04em' }}
     >
-      <span style={{ color: veColor }}>ve</span>
-      <span style={{ color: restColor }}>rtiente</span>
+      <span style={{ color: veColor }}>ev</span>
+      <span style={{ color: restColor }}>market</span>
     </span>
   );
 }

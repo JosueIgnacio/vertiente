@@ -127,7 +127,7 @@ export default function Simulador() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    localStorage.setItem('vertiente_diagnostico', JSON.stringify(data));
+    localStorage.setItem('evmarket_diagnostico', JSON.stringify(data));
     navigate('/resultado');
   };
 

@@ -36,7 +36,7 @@ function Hero() {
           {/* Pill badge */}
           <Badge variant="verde" className="text-xs px-4 py-1.5">
             <Zap className="w-3 h-3" />
-            electromovilidad sin chamullo
+            tu camino a la electromovilidad
           </Badge>
 
           {/* Headline */}
