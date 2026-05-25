@@ -31,6 +31,8 @@ export interface TCOResult {
   mixCarga: MixCarga;
   serieCombustion: { mes: number; costo: number }[];
   serieElectrico: { mes: number; costo: number }[];
+  /** Total de meses en las series (>= 60, extendido para cubrir el cruce) */
+  totalMeses: number;
 }
 
 // ── Modelos EV (para sección pyme / referencia) ───────────────────────────────

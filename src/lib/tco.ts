@@ -69,16 +69,33 @@ export function calcularTCO(data: DiagnosticoData): TCOResult {
   const puntoEquilibrioAnios =
     ahorroAnual > 0 ? inversionNetaEV / ahorroAnual : 99;
 
-  // ── Series para el gráfico (60 meses) ────────────────────────────────────
+  // ── Series para el gráfico ───────────────────────────────────────────────
   // Combustión: parte en $0 (el usuario ya tiene el auto) + costos operacionales
   // Eléctrico:  parte en inversionNetaEV + costos operacionales acumulados
+  //
+  // Las series incluyen mes 0 (puntos de partida visuales) y se extienden
+  // dinámicamente para que el cruce siempre quede visible:
+  //   totalMeses = max(60, mesCruce + 12), cap 120 meses (10 años)
+
   const costoOpCombustionMes = costoCombustibleMes + mantencionCombustionMes;
   const costoOpEVMes = costoEnergiaEVMes + MANTENCION_EV_MENSUAL;
 
-  const serieCombustion: { mes: number; costo: number }[] = [];
-  const serieElectrico: { mes: number; costo: number }[] = [];
+  // Mes exacto del cruce calculado algebraicamente
+  const mesesHastaCruce =
+    ahorroOperacionalMes > 0
+      ? Math.ceil(inversionNetaEV / ahorroOperacionalMes)
+      : null;
 
-  for (let mes = 1; mes <= 60; mes++) {
+  const totalMeses = Math.min(
+    120,
+    Math.max(60, mesesHastaCruce !== null ? mesesHastaCruce + 12 : 60)
+  );
+
+  // Mes 0: combustión en $0, eléctrico en inversionNetaEV (puntos de partida)
+  const serieCombustion: { mes: number; costo: number }[] = [{ mes: 0, costo: 0 }];
+  const serieElectrico:  { mes: number; costo: number }[] = [{ mes: 0, costo: inversionNetaEV }];
+
+  for (let mes = 1; mes <= totalMeses; mes++) {
     serieCombustion.push({ mes, costo: costoOpCombustionMes * mes });
     serieElectrico.push({ mes, costo: inversionNetaEV + costoOpEVMes * mes });
   }
@@ -95,5 +112,6 @@ export function calcularTCO(data: DiagnosticoData): TCOResult {
     mixCarga,
     serieCombustion,
     serieElectrico,
+    totalMeses,
   };
 }

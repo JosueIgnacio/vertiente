@@ -225,7 +225,9 @@ function SeccionGrafico({ result }: { result: ReturnType<typeof calcularTCO> }) 
   return (
     <Card padding="lg">
       <div className="flex items-start justify-between mb-1 gap-2">
-        <h2 className="font-semibold text-[#111827]">Costo acumulado a 60 meses</h2>
+        <h2 className="font-semibold text-[#111827]">
+          Costo acumulado a {Math.round(result.totalMeses / 12)} años
+        </h2>
         <span className="hidden sm:block text-xs text-[#9CA3AF] shrink-0">Combustión vs. Eléctrico</span>
       </div>
       <p className="text-xs text-[#9CA3AF] mb-2">
