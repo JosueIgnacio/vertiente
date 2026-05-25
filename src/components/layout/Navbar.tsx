@@ -37,7 +37,7 @@ export default function Navbar() {
           {/* CTA */}
           <Link to="/simulador">
             <Button size="sm" variant="primary">
-              Calcular mi ahorro
+              Realiza tu diagnóstico
             </Button>
           </Link>
         </nav>

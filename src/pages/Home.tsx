@@ -54,7 +54,7 @@ function Hero() {
           <div className="flex flex-col sm:flex-row gap-3 mt-2">
             <Link to="/simulador">
               <Button size="lg" variant="primary" className="gap-2">
-                Calcular mi ahorro
+                Realiza tu diagnóstico
                 <ArrowRight className="w-4 h-4" />
               </Button>
             </Link>
