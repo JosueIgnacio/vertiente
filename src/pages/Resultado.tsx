@@ -15,7 +15,13 @@ import Button from '../components/ui/Button';
 import TCOChart from '../components/charts/TCOChart';
 import { calcularTCO } from '../lib/tco';
 import { formatCLP, formatCLPMillon, formatAnios } from '../lib/format';
-import { DIAGNOSTICO_DEFAULTS, PRECIO_EV_ESTANDAR, REVENTA_COMBUSTION, CONSUMO_EV_KM_KWH } from '../data/mockDefaults';
+import {
+  DIAGNOSTICO_DEFAULTS, PRECIO_EV_ESTANDAR, REVENTA_COMBUSTION, CONSUMO_EV_KM_KWH,
+  INSTALACION_BASE, INSTALACION_ACOMETIDA_REF, INSTALACION_COSTO_POR_METRO_ACOMETIDA,
+  INSTALACION_DIST_INTERNA_REF, INSTALACION_COSTO_POR_METRO_INTERNO,
+  INSTALACION_RECARGO_SOTERRADO, INSTALACION_RECARGO_EMPALME_DEDICADO,
+  INSTALACION_MARGEN_RANGO,
+} from '../data/mockDefaults';
 import type { DiagnosticoData, InfoCarga } from '../types';
 
 // ── Carga de datos ────────────────────────────────────────────────────────────
@@ -340,6 +346,129 @@ function PaywallBlur({
   );
 }
 
+// ── Estimador de instalación (post-pago) ─────────────────────────────────────
+
+type Canalizacion = 'sobrepuesta' | 'soterrada';
+type Conexion     = 'ampliacion'  | 'dedicado';
+
+function calcularRangoInstalacion(
+  distAcometida: number,
+  distInterna: number,
+  canalizacion: Canalizacion,
+  conexion: Conexion,
+): { min: number; max: number } {
+  const base =
+    INSTALACION_BASE +
+    (distAcometida - INSTALACION_ACOMETIDA_REF) * INSTALACION_COSTO_POR_METRO_ACOMETIDA +
+    (distInterna   - INSTALACION_DIST_INTERNA_REF) * INSTALACION_COSTO_POR_METRO_INTERNO +
+    (canalizacion === 'soterrada' ? INSTALACION_RECARGO_SOTERRADO : 0) +
+    (conexion     === 'dedicado'  ? INSTALACION_RECARGO_EMPALME_DEDICADO : 0);
+  const piso = Math.max(base, 1_200_000);
+  const min  = Math.round(piso * (1 - INSTALACION_MARGEN_RANGO) / 1000) * 1000;
+  const max  = Math.round(piso * (1 + INSTALACION_MARGEN_RANGO) / 1000) * 1000;
+  return { min, max };
+}
+
+function EstimadorInstalacion({ infoCarga: _infoCarga }: { infoCarga: InfoCarga }) {
+  const [distAcometida, setDistAcometida] = useState(20);
+  const [distInterna,   setDistInterna]   = useState(10);
+  const [canalizacion,  setCanalizacion]  = useState<Canalizacion>('sobrepuesta');
+  const [conexion,      setConexion]      = useState<Conexion>('ampliacion');
+
+  const { min, max } = calcularRangoInstalacion(distAcometida, distInterna, canalizacion, conexion);
+
+  return (
+    <div className="mt-5 border-t border-[#E5E7EB] pt-5 flex flex-col gap-5">
+      <div>
+        <p className="text-sm font-semibold text-[#111827] mb-1">Estimador de instalación</p>
+        <p className="text-xs text-[#6B7280] leading-relaxed">
+          Ajusta los parámetros de tu vivienda para obtener un rango referencial de costo.
+        </p>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+
+        {/* Distancia acometida */}
+        <div>
+          <label className="block text-xs font-medium text-[#374151] mb-1.5">
+            Dist. acometida (calle → medidor)
+          </label>
+          <div className="flex items-center border border-[#E5E7EB] rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-[#16A34A] focus-within:border-transparent transition-all">
+            <input
+              type="number" min={0} max={200} value={distAcometida}
+              onChange={(e) => setDistAcometida(Number(e.target.value))}
+              className="flex-1 px-4 py-2.5 text-sm text-[#111827] outline-none bg-white min-w-0"
+            />
+            <span className="px-3 bg-[#F9FAFB] border-l border-[#E5E7EB] text-xs text-[#6B7280] py-2.5 shrink-0">metros</span>
+          </div>
+        </div>
+
+        {/* Distancia interna */}
+        <div>
+          <label className="block text-xs font-medium text-[#374151] mb-1.5">
+            Dist. interna (medidor → estacionamiento)
+          </label>
+          <div className="flex items-center border border-[#E5E7EB] rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-[#16A34A] focus-within:border-transparent transition-all">
+            <input
+              type="number" min={0} max={200} value={distInterna}
+              onChange={(e) => setDistInterna(Number(e.target.value))}
+              className="flex-1 px-4 py-2.5 text-sm text-[#111827] outline-none bg-white min-w-0"
+            />
+            <span className="px-3 bg-[#F9FAFB] border-l border-[#E5E7EB] text-xs text-[#6B7280] py-2.5 shrink-0">metros</span>
+          </div>
+        </div>
+
+        {/* Tipo canalización */}
+        <div>
+          <label className="block text-xs font-medium text-[#374151] mb-1.5">
+            Tipo de canalización
+          </label>
+          <select
+            value={canalizacion}
+            onChange={(e) => setCanalizacion(e.target.value as Canalizacion)}
+            className="w-full px-4 py-2.5 text-sm text-[#111827] border border-[#E5E7EB] rounded-xl bg-white outline-none focus:ring-2 focus:ring-[#16A34A] focus:border-transparent transition-all cursor-pointer"
+          >
+            <option value="sobrepuesta">Sobrepuesta (tubo o canaleta visible)</option>
+            <option value="soterrada">Soterrada (enterrada o embutida)</option>
+          </select>
+        </div>
+
+        {/* Tipo conexión */}
+        <div>
+          <label className="block text-xs font-medium text-[#374151] mb-1.5">
+            Tipo de conexión al empalme
+          </label>
+          <select
+            value={conexion}
+            onChange={(e) => setConexion(e.target.value as Conexion)}
+            className="w-full px-4 py-2.5 text-sm text-[#111827] border border-[#E5E7EB] rounded-xl bg-white outline-none focus:ring-2 focus:ring-[#16A34A] focus:border-transparent transition-all cursor-pointer"
+          >
+            <option value="ampliacion">Ampliación del empalme existente</option>
+            <option value="dedicado">Empalme dedicado exclusivo</option>
+          </select>
+        </div>
+
+      </div>
+
+      {/* Resultado del rango */}
+      <div className="bg-[#F0FDF4] border border-[#BBF7D0] rounded-xl px-5 py-4">
+        <p className="text-xs text-[#6B7280] mb-1">Rango estimado de instalación</p>
+        <p className="text-xl font-bold text-[#0F3D2E]">
+          {formatCLPMillon(min)} – {formatCLPMillon(max)}
+        </p>
+        <p className="text-[10px] text-[#9CA3AF] mt-1.5">
+          Estimación referencial, no es una cotización.
+        </p>
+      </div>
+
+      <p className="text-xs text-[#6B7280] leading-relaxed">
+        Con este rango, podemos conectarte con instaladores certificados que ofrezcan
+        el servicio dentro de tu presupuesto.
+      </p>
+    </div>
+  );
+}
+
 // ── Ruta recomendada (post-registro) ─────────────────────────────────────────
 
 const PROXIMOS_PASOS = [
@@ -350,7 +479,10 @@ const PROXIMOS_PASOS = [
   { icon: <Users className="w-4 h-4" />, titulo: 'Conectar con proveedores y dar el salto', desc: 'Coordina la instalación y programa la transición a tu ritmo.' },
 ];
 
-function RutaRecomendada() {
+function RutaRecomendada({ infoCarga }: { infoCarga: InfoCarga }) {
+  const [showEstimador, setShowEstimador] = useState(false);
+  const conInstalacion = infoCarga.tramo !== 'viaje';
+
   return (
     <div className="mt-10 flex flex-col gap-6">
       {/* Próximos pasos */}
@@ -397,7 +529,8 @@ function RutaRecomendada() {
           {/* Análisis completo */}
           <button
             type="button"
-            className="text-left rounded-2xl border-2 border-[#0F3D2E] p-5 hover:shadow-md hover:-translate-y-0.5 transition-all duration-150 cursor-pointer bg-white relative overflow-hidden"
+            onClick={() => conInstalacion && setShowEstimador((v) => !v)}
+            className={`text-left rounded-2xl border-2 border-[#0F3D2E] p-5 hover:shadow-md hover:-translate-y-0.5 transition-all duration-150 bg-white relative overflow-hidden ${conInstalacion ? 'cursor-pointer' : 'cursor-default'}`}
           >
             <div className="absolute top-3 right-3">
               <Badge variant="verde" className="text-[10px]">Recomendado</Badge>
@@ -405,12 +538,17 @@ function RutaRecomendada() {
             <FileText className="w-5 h-5 text-[#0F3D2E] mb-3" />
             <p className="font-semibold text-sm text-[#111827] mb-1">Análisis completo</p>
             <p className="text-xs text-[#6B7280] leading-relaxed mb-3">
-              Factibilidad de carga, comparación de modelos, cotización de instalación, financiamiento y contacto con proveedores.
+              Factibilidad de carga, comparación de modelos,{conInstalacion ? ' cotización de instalación,' : ''} financiamiento y contacto con proveedores.
             </p>
             <div className="flex items-center gap-2">
               <span className="text-base font-bold text-[#0F3D2E]">$14.990</span>
               <span className="text-xs text-[#9CA3AF] line-through">$29.990</span>
             </div>
+            {conInstalacion && (
+              <p className="text-[10px] text-[#16A34A] mt-2 font-medium">
+                {showEstimador ? '▲ Cerrar estimador' : '▼ Ver estimador de instalación'}
+              </p>
+            )}
           </button>
 
           {/* Asesoría pyme */}
@@ -429,6 +567,13 @@ function RutaRecomendada() {
           </Link>
 
         </div>
+
+        {/* Estimador de instalación (solo tramos con cargador) */}
+        {showEstimador && conInstalacion && (
+          <Card padding="lg">
+            <EstimadorInstalacion infoCarga={infoCarga} />
+          </Card>
+        )}
       </div>
     </div>
   );
@@ -519,7 +664,7 @@ export default function Resultado() {
           )}
 
           {/* ── Ruta recomendada (solo post-registro) ── */}
-          {registered && <RutaRecomendada />}
+          {registered && <RutaRecomendada infoCarga={result.infoCarga} />}
 
         </Container>
       </main>
