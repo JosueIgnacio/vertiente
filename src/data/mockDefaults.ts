@@ -58,6 +58,11 @@ export const INSTALACION_RECARGO_SOTERRADO = 500_000;
 export const INSTALACION_RECARGO_EMPALME_DEDICADO = 250_000;
 export const INSTALACION_MARGEN_RANGO = 0.12;              // ±12%
 
+// ── Financiamiento referencial ────────────────────────────────────────────────
+
+/** Tasa mensual referencial BancoEstado Crédito Verde (equivalente a CAE referencial) */
+export const TASA_MENSUAL_REFERENCIAL = 0.0089;
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Defaults del formulario de diagnóstico (persona natural)
 // ─────────────────────────────────────────────────────────────────────────────

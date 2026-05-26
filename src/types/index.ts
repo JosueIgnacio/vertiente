@@ -58,3 +58,30 @@ export interface EVModel {
   consumoKmKwh: number;
   descripcion: string;
 }
+
+// ── Flujo Análisis completo (persona natural) ─────────────────────────────────
+
+export interface ModeloEV {
+  id: string;
+  marca: string;
+  modelo: string;
+  carroceria: string;
+  autonomiaKm: number;
+  consumoKmKwh: number;
+  plazas: number;
+}
+
+export interface Proveedor {
+  id: string;
+  nombre: string;
+  telefono: string;
+  correo: string;
+  leadCasilla: string;
+}
+
+export interface Oferta {
+  id: string;
+  modeloId: string;
+  proveedorId: string;
+  precio: number;
+}

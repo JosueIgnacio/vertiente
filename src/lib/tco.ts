@@ -135,3 +135,29 @@ export function calcularTCO(data: DiagnosticoData): TCOResult {
     totalMeses,
   };
 }
+
+/**
+ * Calcula el ahorro mensual operacional para un modelo EV específico.
+ * Escala el consumo de energía según el consumo real del modelo (km/kWh),
+ * usando el consumo estándar `CONSUMO_EV_KM_KWH` como referencia base.
+ */
+export function calcularAhorroMensualConModelo(
+  data: DiagnosticoData,
+  consumoKmKwh: number,
+): number {
+  const kmMes = data.kmDia * DIAS_POR_MES;
+  const costoCombustibleMes     = (kmMes / data.rendimientoKmL) * PRECIO_BENCINA;
+  const mantencionCombustionMes = data.mantencionAnual / 12;
+
+  const infoCarga = calcularInfoCarga(data.kmDia);
+
+  // Factor de escala: modelo con menor consumo (más eficiente) gasta menos energía
+  const factor = CONSUMO_EV_KM_KWH / consumoKmKwh;
+
+  const costoEnergiaModeloMes =
+    infoCarga.energiaDomiciliariaKwMes * factor * PRECIO_ELECTRICIDAD_CASA +
+    infoCarga.energiaPublicaKwMes      * factor * PRECIO_ELECTRICIDAD_PUBLICA;
+
+  return (costoCombustibleMes + mantencionCombustionMes) -
+         (costoEnergiaModeloMes + MANTENCION_EV_MENSUAL);
+}
