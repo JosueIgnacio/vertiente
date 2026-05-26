@@ -117,7 +117,18 @@ function ModalRegistro({ onClose, onSuccess }: { onClose: () => void; onSuccess:
 
 // ── Sección 1: Alternativa eléctrica asignada ─────────────────────────────────
 
-function SeccionAlternativa() {
+function SeccionAlternativa({ infoCarga }: { infoCarga: InfoCarga }) {
+  const conInstalacion = infoCarga.tramo !== 'viaje';
+
+  const stats = [
+    { label: 'Precio referencial', value: formatCLPMillon(PRECIO_EV_ESTANDAR) },
+    { label: 'Consumo', value: `${CONSUMO_EV_KM_KWH} km / kWh` },
+    { label: 'Reventa tu auto actual', value: `−${formatCLPMillon(REVENTA_COMBUSTION)}` },
+    ...(conInstalacion
+      ? [{ label: 'Cargador domiciliario', value: `+${formatCLPMillon(infoCarga.costoInstalacion)}` }]
+      : []),
+  ];
+
   return (
     <Card padding="lg" className="border-[#DCFCE7]">
       <div className="flex items-center gap-2 mb-4">
@@ -128,12 +139,8 @@ function SeccionAlternativa() {
         <Badge variant="verde" className="ml-auto text-[10px]">Asignado para ti</Badge>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
-        {[
-          { label: 'Precio referencial', value: formatCLPMillon(PRECIO_EV_ESTANDAR) },
-          { label: 'Consumo', value: `${CONSUMO_EV_KM_KWH} km / kWh` },
-          { label: 'Reventa tu auto actual', value: `−${formatCLPMillon(REVENTA_COMBUSTION)}` },
-        ].map((s) => (
+      <div className={`grid gap-4 mb-4 ${conInstalacion ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-1 sm:grid-cols-3'}`}>
+        {stats.map((s) => (
           <div key={s.label} className="bg-[#F9FAFB] rounded-xl p-4 border border-[#F3F4F6]">
             <p className="text-[10px] text-[#9CA3AF] uppercase tracking-wider mb-1">{s.label}</p>
             <p className="text-base font-bold text-[#111827]">{s.value}</p>
@@ -146,8 +153,11 @@ function SeccionAlternativa() {
         Para tu comparación usamos un vehículo eléctrico estándar de{' '}
         <strong>{formatCLPMillon(PRECIO_EV_ESTANDAR)}</strong>, con un rendimiento de{' '}
         <strong>{CONSUMO_EV_KM_KWH} km/kWh</strong>, evaluado bajo la misma operación que
-        reportaste. No necesitas saber de electromovilidad para entender si te conviene: nosotros
-        hacemos la comparación por ti.
+        reportaste.{conInstalacion && (
+          <> La inversión incluye la instalación del cargador domiciliario
+          ({formatCLPMillon(infoCarga.costoInstalacion)} referencial, fuente AgenciaSE 2026).</>
+        )}{' '}
+        Nosotros hacemos la comparación por ti.
       </div>
     </Card>
   );
@@ -486,7 +496,7 @@ export default function Resultado() {
 
           {/* ── Sección 1: Alternativa eléctrica — siempre visible ── */}
           <div className="mb-6">
-            <SeccionAlternativa />
+            <SeccionAlternativa infoCarga={result.infoCarga} />
           </div>
 
           {/* ── Secciones 2–4: difuminadas hasta registro ── */}
