@@ -542,8 +542,8 @@ function RutaRecomendada({ infoCarga }: { infoCarga: InfoCarga }) {
           {/* Análisis completo */}
           <button
             type="button"
-            onClick={() => conInstalacion && setShowEstimador((v) => !v)}
-            className={`text-left rounded-2xl border-2 border-[#0F3D2E] p-5 hover:shadow-md hover:-translate-y-0.5 transition-all duration-150 bg-white relative overflow-hidden ${conInstalacion ? 'cursor-pointer' : 'cursor-default'}`}
+            onClick={() => setShowEstimador((v) => !v)}
+            className="text-left rounded-2xl border-2 border-[#0F3D2E] p-5 hover:shadow-md hover:-translate-y-0.5 transition-all duration-150 bg-white relative overflow-hidden cursor-pointer"
           >
             <div className="absolute top-3 right-3">
               <Badge variant="verde" className="text-[10px]">Recomendado</Badge>
@@ -557,11 +557,9 @@ function RutaRecomendada({ infoCarga }: { infoCarga: InfoCarga }) {
               <span className="text-base font-bold text-[#0F3D2E]">$14.990</span>
               <span className="text-xs text-[#9CA3AF] line-through">$29.990</span>
             </div>
-            {conInstalacion && (
-              <p className="text-[10px] text-[#16A34A] mt-2 font-medium">
-                {showEstimador ? '▲ Cerrar estimador' : '▼ Ver estimador de instalación'}
-              </p>
-            )}
+            <p className="text-[10px] text-[#16A34A] mt-2 font-medium">
+              {showEstimador ? '▲ Cerrar estimador' : '▼ Ver estimador de instalación'}
+            </p>
           </button>
 
           {/* Asesoría pyme */}
@@ -581,9 +579,15 @@ function RutaRecomendada({ infoCarga }: { infoCarga: InfoCarga }) {
 
         </div>
 
-        {/* Estimador de instalación (solo tramos con cargador) */}
-        {showEstimador && conInstalacion && (
+        {/* Estimador de instalación */}
+        {showEstimador && (
           <Card padding="lg">
+            {!conInstalacion && (
+              <div className="mb-4 bg-[#F0FDF4] border border-[#DCFCE7] rounded-xl px-4 py-3 text-xs text-[#15803D]">
+                Con tu perfil de uso no necesitas instalación especial — basta el enchufe doméstico.
+                Aun así, aquí puedes estimar el costo si quisieras instalar un cargador dedicado.
+              </div>
+            )}
             <EstimadorInstalacion infoCarga={infoCarga} />
           </Card>
         )}
