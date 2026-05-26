@@ -15,7 +15,7 @@ import {
   INSTALACION_BASE, INSTALACION_ACOMETIDA_REF, INSTALACION_COSTO_POR_METRO_ACOMETIDA,
   INSTALACION_DIST_INTERNA_REF, INSTALACION_COSTO_POR_METRO_INTERNO,
   INSTALACION_RECARGO_SOTERRADO, INSTALACION_RECARGO_EMPALME_DEDICADO,
-  INSTALACION_MARGEN_RANGO, REVENTA_COMBUSTION,
+  INSTALACION_MARGEN_RANGO, REVENTA_COMBUSTION, TASA_MENSUAL_REFERENCIAL,
 } from '../data/mockDefaults';
 import { MODELOS } from '../data/modelos';
 import { PROVEEDORES } from '../data/proveedores';
@@ -465,18 +465,167 @@ function Vista2Modelos({ diagData, state, set }: Vista2Props) {
   );
 }
 
-function Vista3Placeholder() {
+// ── Vista 3 — Financiamiento ───────────────────────────────────────────────────
+
+interface Vista3Props {
+  state: AnalisisState;
+  set: (p: Partial<AnalisisState>) => void;
+}
+
+const PLAZOS = [12, 24, 36, 48, 60];
+
+function Vista3Financiamiento({ state, set }: Vista3Props) {
+  // Ofertas disponibles: las marcadas si hay, si no todas
+  const ofertasDisponibles = state.ofertasMarcadas.length > 0
+    ? OFERTAS.filter((o) => state.ofertasMarcadas.includes(o.id))
+    : OFERTAS;
+
+  // Inicializar ofertaFinanciamiento si está vacía
+  useEffect(() => {
+    if (!state.ofertaFinanciamiento && ofertasDisponibles.length > 0) {
+      set({ ofertaFinanciamiento: ofertasDisponibles[0].id });
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const ofertaSeleccionada = OFERTAS.find((o) => o.id === state.ofertaFinanciamiento)
+    ?? ofertasDisponibles[0];
+
+  const modeloSel  = ofertaSeleccionada
+    ? MODELOS.find((m) => m.id === ofertaSeleccionada.modeloId)
+    : null;
+  const proveedorSel = ofertaSeleccionada
+    ? PROVEEDORES.find((p) => p.id === ofertaSeleccionada.proveedorId)
+    : null;
+
+  const precio  = ofertaSeleccionada?.precio ?? 0;
+  const monto   = Math.max(0, precio - state.pie);
+  const r       = TASA_MENSUAL_REFERENCIAL;
+  const n       = state.plazoMeses;
+  const cuota   = monto > 0 ? monto * r / (1 - Math.pow(1 + r, -n)) : 0;
+  const totalPagado = state.pie + cuota * n;
+  const costoFinanciero = totalPagado - precio;
+
   return (
-    <Card padding="lg">
-      <div className="flex items-center gap-2 mb-4">
-        <Zap className="w-5 h-5 text-[#16A34A]" />
-        <h2 className="font-semibold text-[#111827]">Simulador de financiamiento</h2>
-        <Badge variant="verde" className="ml-auto text-[10px]">Paso 3</Badge>
+    <div className="flex flex-col gap-5">
+
+      {/* Selector de oferta */}
+      <Card padding="lg">
+        <h2 className="font-bold text-[#111827] mb-4">Simulador de financiamiento</h2>
+
+        <div className="mb-4">
+          <label className="block text-xs font-medium text-[#374151] mb-1.5">
+            Modelo a financiar
+          </label>
+          <select
+            value={state.ofertaFinanciamiento}
+            onChange={(e) => set({ ofertaFinanciamiento: e.target.value })}
+            className="w-full px-4 py-2.5 text-sm text-[#111827] border border-[#E5E7EB] rounded-xl bg-white outline-none focus:ring-2 focus:ring-[#16A34A] focus:border-transparent transition-all cursor-pointer"
+          >
+            {ofertasDisponibles.map((o) => {
+              const m = MODELOS.find((mod) => mod.id === o.modeloId);
+              const p = PROVEEDORES.find((prov) => prov.id === o.proveedorId);
+              return (
+                <option key={o.id} value={o.id}>
+                  {m?.marca} {m?.modelo} — {p?.nombre} ({formatCLPMillon(o.precio)})
+                </option>
+              );
+            })}
+          </select>
+        </div>
+
+        {/* Info del modelo seleccionado */}
+        {modeloSel && proveedorSel && (
+          <div className="flex items-center gap-3 bg-[#F9FAFB] rounded-xl px-4 py-3 mb-5">
+            <div className="w-10 h-10 rounded-xl bg-[#E5E7EB] flex items-center justify-center shrink-0">
+              <Car className="w-5 h-5 text-[#9CA3AF]" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-[#111827]">
+                {modeloSel.marca} {modeloSel.modelo}
+              </p>
+              <p className="text-xs text-[#6B7280]">{proveedorSel.nombre} · {modeloSel.carroceria}</p>
+            </div>
+            <p className="ml-auto text-lg font-bold text-[#0F3D2E]">{formatCLPMillon(precio)}</p>
+          </div>
+        )}
+
+        {/* Inputs */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
+
+          {/* Pie */}
+          <div>
+            <label className="block text-xs font-medium text-[#374151] mb-1.5">
+              Pie inicial
+            </label>
+            <div className="flex items-center border border-[#E5E7EB] rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-[#16A34A] focus-within:border-transparent transition-all">
+              <span className="px-3 bg-[#F9FAFB] border-r border-[#E5E7EB] text-xs text-[#6B7280] py-2.5 shrink-0">$</span>
+              <input
+                type="number" min={0} max={precio} step={100_000}
+                value={state.pie}
+                onChange={(e) => set({ pie: Math.min(Number(e.target.value), precio) })}
+                className="flex-1 px-3 py-2.5 text-sm text-[#111827] outline-none bg-white min-w-0"
+              />
+            </div>
+            <p className="text-[10px] text-[#9CA3AF] mt-1">
+              {state.pie > 0 ? `${((state.pie / precio) * 100).toFixed(0)}% del valor` : 'Sin pie'}
+            </p>
+          </div>
+
+          {/* Plazo */}
+          <div>
+            <label className="block text-xs font-medium text-[#374151] mb-1.5">
+              Plazo del crédito
+            </label>
+            <select
+              value={state.plazoMeses}
+              onChange={(e) => set({ plazoMeses: Number(e.target.value) })}
+              className="w-full px-4 py-2.5 text-sm text-[#111827] border border-[#E5E7EB] rounded-xl bg-white outline-none focus:ring-2 focus:ring-[#16A34A] focus:border-transparent transition-all cursor-pointer"
+            >
+              {PLAZOS.map((p) => (
+                <option key={p} value={p}>{p} meses ({(p / 12).toFixed(0)} años)</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {/* Resultado */}
+        <div className="bg-[#F0FDF4] border border-[#BBF7D0] rounded-2xl px-5 py-5">
+          <div className="grid grid-cols-3 gap-4 mb-3">
+            <div className="text-center">
+              <p className="text-[10px] text-[#6B7280] mb-0.5">Monto a financiar</p>
+              <p className="text-base font-bold text-[#0F3D2E]">{formatCLPMillon(monto)}</p>
+            </div>
+            <div className="text-center border-x border-[#D1FAE5]">
+              <p className="text-[10px] text-[#6B7280] mb-0.5">Cuota mensual</p>
+              <p className="text-xl font-extrabold text-[#16A34A]">{formatCLP(Math.round(cuota))}</p>
+            </div>
+            <div className="text-center">
+              <p className="text-[10px] text-[#6B7280] mb-0.5">Costo financiero</p>
+              <p className="text-base font-bold text-[#374151]">{formatCLPMillon(costoFinanciero)}</p>
+            </div>
+          </div>
+          <p className="text-[10px] text-[#9CA3AF] text-center">
+            Total a pagar (pie + cuotas): <strong>{formatCLPMillon(totalPagado)}</strong>
+          </p>
+        </div>
+      </Card>
+
+      {/* Disclaimer BancoEstado */}
+      <div className="bg-[#FFFBEB] border border-[#FDE68A] rounded-2xl px-5 py-4">
+        <p className="text-xs text-[#92400E] leading-relaxed mb-2">
+          <strong>Tasa referencial de 0,89% mensual</strong>, equivalente a CAE referencial. Sujeta a
+          evaluación crediticia del banco y variable según campaña vigente de BancoEstado.
+        </p>
+        <a
+          href="https://www.bancoestado.cl/personas/creditos/credito-verde"
+          target="_blank" rel="noopener noreferrer"
+          className="text-xs font-semibold text-[#92400E] underline underline-offset-2 hover:text-[#78350F] transition-colors"
+        >
+          Ver Crédito Verde BancoEstado →
+        </a>
       </div>
-      <p className="text-sm text-[#6B7280]">
-        Aquí irá el simulador de cuota BancoEstado (Etapa 5).
-      </p>
-    </Card>
+
+    </div>
   );
 }
 
@@ -598,7 +747,7 @@ export default function Analisis() {
               <Vista1Estimador infoCarga={tcoResult.infoCarga} state={state} set={set} />
             )}
             {state.paso === 2 && <Vista2Modelos diagData={diagData} state={state} set={set} />}
-            {state.paso === 3 && <Vista3Placeholder />}
+            {state.paso === 3 && <Vista3Financiamiento state={state} set={set} />}
             {state.paso === 4 && <Vista4Placeholder />}
           </div>
 
