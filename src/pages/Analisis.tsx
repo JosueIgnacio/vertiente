@@ -648,7 +648,9 @@ function generateFolio(): string {
 }
 
 export function encodePayload(data: unknown): string {
-  return btoa(JSON.stringify(data))
+  // encodeURIComponent antes de btoa para soportar caracteres fuera de Latin-1
+  // (ej. em dash —, tildes, etc.) que btoa no puede codificar directamente
+  return btoa(encodeURIComponent(JSON.stringify(data)))
     .replace(/\+/g, '-')
     .replace(/\//g, '_')
     .replace(/=/g, '');

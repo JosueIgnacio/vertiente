@@ -7,7 +7,8 @@ import { formatCLPMillon } from '../lib/format';
 // ── Decodificación del payload ────────────────────────────────────────────────
 
 function decodePayload(encoded: string): ComprobantePayload {
-  const json = atob(encoded.replace(/-/g, '+').replace(/_/g, '/'));
+  // Invertir encodeURIComponent + btoa aplicados en encodePayload
+  const json = decodeURIComponent(atob(encoded.replace(/-/g, '+').replace(/_/g, '/')));
   return JSON.parse(json) as ComprobantePayload;
 }
 
