@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, ArrowRight, Car, Check, BarChart3, Zap } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Car, Check, BarChart3, Mail, Phone, Zap } from 'lucide-react';
+import { QRCodeSVG } from 'qrcode.react';
 import Navbar from '../components/layout/Navbar';
 import Footer from '../components/layout/Footer';
 import Container from '../components/layout/Container';
@@ -629,18 +630,150 @@ function Vista3Financiamiento({ state, set }: Vista3Props) {
   );
 }
 
-function Vista4Placeholder() {
+// ── Vista 4 — Proveedores + QR ────────────────────────────────────────────────
+
+export interface ComprobantePayload {
+  folio: string;
+  fecha: string;
+  nombre: string;
+  email: string;
+  proveedor: { nombre: string; telefono: string; correo: string; leadCasilla: string };
+  productos: Array<{ marca: string; modelo: string; carroceria: string; precio: number }>;
+}
+
+function generateFolio(): string {
+  const fecha = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+  const rand  = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+  return `VRT-${fecha}-${rand}`;
+}
+
+export function encodePayload(data: unknown): string {
+  return btoa(JSON.stringify(data))
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=/g, '');
+}
+
+interface Vista4Props {
+  state: AnalisisState;
+  sesion: { nombre: string; email: string };
+}
+
+function Vista4Proveedores({ state, sesion }: Vista4Props) {
+  // Folios estables por proveedor al montar
+  const [folios] = useState<Record<string, string>>(() => {
+    const f: Record<string, string> = {};
+    PROVEEDORES.forEach((p) => { f[p.id] = generateFolio(); });
+    return f;
+  });
+
+  // Agrupar ofertas marcadas por proveedor
+  const ofertasActivas = state.ofertasMarcadas.length > 0
+    ? OFERTAS.filter((o) => state.ofertasMarcadas.includes(o.id))
+    : OFERTAS;
+
+  // Proveedores que aparecen en las ofertas activas (sin duplicados, en orden)
+  const proveedoresActivos = PROVEEDORES.filter((p) =>
+    ofertasActivas.some((o) => o.proveedorId === p.id)
+  );
+
   return (
-    <Card padding="lg">
-      <div className="flex items-center gap-2 mb-4">
-        <Zap className="w-5 h-5 text-[#16A34A]" />
-        <h2 className="font-semibold text-[#111827]">Contacto con proveedores</h2>
-        <Badge variant="verde" className="ml-auto text-[10px]">Paso 4</Badge>
+    <div className="flex flex-col gap-6">
+      <div>
+        <h2 className="font-bold text-[#111827] text-lg">Contacto con proveedores</h2>
+        <p className="text-sm text-[#6B7280] mt-0.5">
+          Escanea el QR o guarda el comprobante para solicitar una cotización formal.
+        </p>
+        {/* Nota para demo */}
+        <p className="text-[10px] text-[#9CA3AF] mt-1 italic">
+          {/* Este QR apunta a la URL pública de la app. Para demostrarlo, escanear desde la versión en Vercel, no desde localhost. */}
+          Los QR funcionan desde la versión publicada en Vercel.
+        </p>
       </div>
-      <p className="text-sm text-[#6B7280]">
-        Aquí irán los QR y comprobantes de lead (Etapa 6).
-      </p>
-    </Card>
+
+      {proveedoresActivos.map((proveedor) => {
+        const ofertasProveedor = ofertasActivas.filter((o) => o.proveedorId === proveedor.id);
+        const folio = folios[proveedor.id];
+        const fecha = new Date().toLocaleDateString('es-CL', { day: '2-digit', month: '2-digit', year: 'numeric' });
+
+        const productos = ofertasProveedor.map((o) => {
+          const m = MODELOS.find((mod) => mod.id === o.modeloId)!;
+          return { marca: m.marca, modelo: m.modelo, carroceria: m.carroceria, precio: o.precio };
+        });
+
+        const payload: ComprobantePayload = {
+          folio,
+          fecha,
+          nombre: sesion.nombre,
+          email: sesion.email,
+          proveedor: {
+            nombre:      proveedor.nombre,
+            telefono:    proveedor.telefono,
+            correo:      proveedor.correo,
+            leadCasilla: proveedor.leadCasilla,
+          },
+          productos,
+        };
+
+        // Este QR apunta a la URL pública de la app. Para demostrarlo, escanear desde la versión en Vercel, no desde localhost.
+        const qrUrl = `${window.location.origin}/comprobante?d=${encodePayload(payload)}`;
+
+        return (
+          <Card key={proveedor.id} padding="lg">
+            {/* Encabezado del proveedor */}
+            <div className="flex items-start justify-between gap-4 mb-4">
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-[#9CA3AF] mb-0.5">Proveedor</p>
+                <h3 className="font-bold text-[#111827] text-base">{proveedor.nombre}</h3>
+                <div className="flex flex-col gap-1 mt-2">
+                  <a href={`tel:${proveedor.telefono}`} className="flex items-center gap-1.5 text-xs text-[#374151] hover:text-[#16A34A] transition-colors">
+                    <Phone className="w-3 h-3" />{proveedor.telefono}
+                  </a>
+                  <a href={`mailto:${proveedor.correo}`} className="flex items-center gap-1.5 text-xs text-[#374151] hover:text-[#16A34A] transition-colors">
+                    <Mail className="w-3 h-3" />{proveedor.correo}
+                  </a>
+                </div>
+                <div className="mt-2 bg-[#F9FAFB] border border-[#E5E7EB] rounded-lg px-3 py-1.5">
+                  <p className="text-[10px] text-[#9CA3AF]">Asunto del mensaje</p>
+                  <p className="text-xs text-[#374151] font-medium">{proveedor.leadCasilla}</p>
+                </div>
+              </div>
+
+              {/* QR */}
+              <div className="bg-[#F0FDF4] rounded-2xl p-3 flex flex-col items-center gap-2 shrink-0">
+                <QRCodeSVG value={qrUrl} size={112} />
+                <p className="text-[10px] text-[#6B7280] text-center leading-tight max-w-[112px]">
+                  Escanea para ver el comprobante
+                </p>
+              </div>
+            </div>
+
+            {/* Productos */}
+            <div className="border-t border-[#F3F4F6] pt-4">
+              <p className="text-xs font-semibold text-[#374151] mb-2">Modelos de interés</p>
+              <div className="flex flex-col gap-2">
+                {productos.map((prod, i) => (
+                  <div key={i} className="flex items-center gap-3 bg-[#F9FAFB] rounded-xl px-3 py-2">
+                    <Car className="w-4 h-4 text-[#9CA3AF] shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-semibold text-[#111827] truncate">{prod.marca} {prod.modelo}</p>
+                      <p className="text-[10px] text-[#6B7280]">{prod.carroceria}</p>
+                    </div>
+                    <p className="text-sm font-bold text-[#0F3D2E] shrink-0">{formatCLPMillon(prod.precio)}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Folio */}
+            <div className="flex items-center justify-between mt-4 pt-3 border-t border-[#F3F4F6]">
+              <p className="text-[10px] text-[#9CA3AF]">Folio: <span className="font-mono font-semibold text-[#6B7280]">{folio}</span></p>
+              <p className="text-[10px] text-[#9CA3AF]">{fecha}</p>
+            </div>
+          </Card>
+        );
+      })}
+    </div>
   );
 }
 
@@ -748,7 +881,7 @@ export default function Analisis() {
             )}
             {state.paso === 2 && <Vista2Modelos diagData={diagData} state={state} set={set} />}
             {state.paso === 3 && <Vista3Financiamiento state={state} set={set} />}
-            {state.paso === 4 && <Vista4Placeholder />}
+            {state.paso === 4 && <Vista4Proveedores state={state} sesion={sesion} />}
           </div>
 
           {/* Navegación inferior */}

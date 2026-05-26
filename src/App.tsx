@@ -5,6 +5,7 @@ import Resultado from './pages/Resultado';
 import Analisis from './pages/Analisis';
 import Ruta from './pages/Ruta';
 import Pyme from './pages/Pyme';
+import Comprobante from './pages/Comprobante';
 import ScrollToTop from './components/layout/ScrollToTop';
 
 function App() {
@@ -18,6 +19,7 @@ function App() {
         <Route path="/analisis" element={<Analisis />} />
         <Route path="/ruta" element={<Ruta />} />
         <Route path="/pyme" element={<Pyme />} />
+        <Route path="/comprobante" element={<Comprobante />} />
       </Routes>
     </BrowserRouter>
   );
