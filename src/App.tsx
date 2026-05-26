@@ -4,10 +4,12 @@ import Simulador from './pages/Simulador';
 import Resultado from './pages/Resultado';
 import Ruta from './pages/Ruta';
 import Pyme from './pages/Pyme';
+import ScrollToTop from './components/layout/ScrollToTop';
 
 function App() {
   return (
     <BrowserRouter>
+      <ScrollToTop />
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/simulador" element={<Simulador />} />

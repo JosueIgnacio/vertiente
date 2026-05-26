@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   ArrowRight, RotateCcw, Zap, BatteryCharging, TrendingDown, Clock,
@@ -28,8 +28,6 @@ function loadData(): DiagnosticoData {
   return DIAGNOSTICO_DEFAULTS;
 }
 
-const REGISTERED_KEY = 'evmarket_registered';
-
 // ── Modal de registro ─────────────────────────────────────────────────────────
 
 function ModalRegistro({ onClose, onSuccess }: { onClose: () => void; onSuccess: () => void }) {
@@ -43,7 +41,6 @@ function ModalRegistro({ onClose, onSuccess }: { onClose: () => void; onSuccess:
     setLoading(true);
     // Simulado: espera 800ms y "registra"
     setTimeout(() => {
-      localStorage.setItem(REGISTERED_KEY, '1');
       onSuccess();
       setLoading(false);
     }, 800);
@@ -437,18 +434,9 @@ export default function Resultado() {
   const simData = useMemo(loadData, []);
   const result = useMemo(() => calcularTCO(simData), [simData]);
 
-  // Estado de registro (persiste en localStorage)
-  const [registered, setRegistered] = useState(
-    () => localStorage.getItem(REGISTERED_KEY) === '1'
-  );
+  // Estado de registro — siempre parte en false; no persiste entre sesiones
+  const [registered, setRegistered] = useState(false);
   const [showModal, setShowModal] = useState(false);
-
-  // Si ya estaba registrado al cargar, revelamos directo
-  useEffect(() => {
-    if (localStorage.getItem(REGISTERED_KEY) === '1') {
-      setRegistered(true);
-    }
-  }, []);
 
   const handleRegistrationSuccess = () => {
     setRegistered(true);
