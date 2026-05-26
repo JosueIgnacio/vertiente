@@ -16,7 +16,7 @@ import TCOChart from '../components/charts/TCOChart';
 import { calcularTCO } from '../lib/tco';
 import { formatCLP, formatCLPMillon, formatAnios } from '../lib/format';
 import { DIAGNOSTICO_DEFAULTS, PRECIO_EV_ESTANDAR, REVENTA_COMBUSTION, CONSUMO_EV_KM_KWH } from '../data/mockDefaults';
-import type { DiagnosticoData } from '../types';
+import type { DiagnosticoData, InfoCarga } from '../types';
 
 // ── Carga de datos ────────────────────────────────────────────────────────────
 
@@ -155,17 +155,28 @@ function SeccionAlternativa() {
 
 // ── Sección 2: Tipo de carga ──────────────────────────────────────────────────
 
-function SeccionCarga({ result, kmDia }: { result: ReturnType<typeof calcularTCO>; kmDia: number }) {
-  const { pctCasa, pctPublica, precioKwhEfectivo } = result.mixCarga;
+function SeccionCarga({ result }: { result: ReturnType<typeof calcularTCO> }) {
+  const { infoCarga, costoEnergiaEVMes } = result;
 
-  let mensajeCarga: string;
-  if (kmDia < 100) {
-    mensajeCarga = 'Con tu operación te basta con cargar en casa durante la noche. No necesitas carga pública.';
-  } else if (kmDia < 200) {
-    mensajeCarga = `Tu operación sugiere ~${Math.round(pctCasa * 100)}% carga en casa y ~${Math.round(pctPublica * 100)}% en red pública. Asegúrate de tener un cargador domiciliario o acceso a electrolineras en tu ruta.`;
-  } else {
-    mensajeCarga = `Tu alto kilometraje sugiere repartir la carga: ~${Math.round(pctCasa * 100)}% en casa y ~${Math.round(pctPublica * 100)}% en red pública. La infraestructura de carga en tu zona es un factor clave.`;
-  }
+  const tramoInfo: Record<InfoCarga['tramo'], { titulo: string; desc: string; colorBg: string; colorBorder: string; colorText: string }> = {
+    viaje: {
+      titulo: 'Cargador de viaje (2,3 kW)',
+      desc: 'Enchufe estándar doméstico. No requiere instalación especial ni inversión adicional.',
+      colorBg: 'bg-[#F0FDF4]', colorBorder: 'border-[#DCFCE7]', colorText: 'text-[#15803D]',
+    },
+    domiciliario: {
+      titulo: 'Cargador domiciliario dedicado (7,4 kW)',
+      desc: 'Requiere instalación eléctrica certificada. Costo estándar estimado: $1.900.000 (fuente: AgenciaSE 2026).',
+      colorBg: 'bg-[#EFF6FF]', colorBorder: 'border-[#BFDBFE]', colorText: 'text-[#1D4ED8]',
+    },
+    mixto: {
+      titulo: 'Cargador domiciliario (7,4 kW) + carga pública',
+      desc: 'Tu kilometraje supera lo que cubre la carga nocturna en casa. El excedente diario se cubre en la red pública. Costo de instalación estimado: $1.900.000 (AgenciaSE 2026).',
+      colorBg: 'bg-[#FFFBEB]', colorBorder: 'border-[#FDE68A]', colorText: 'text-[#92400E]',
+    },
+  };
+
+  const info = tramoInfo[infoCarga.tramo];
 
   return (
     <Card padding="lg">
@@ -176,41 +187,26 @@ function SeccionCarga({ result, kmDia }: { result: ReturnType<typeof calcularTCO
         <h2 className="font-semibold text-[#111827]">Tu tipo de carga recomendado</h2>
       </div>
 
-      {/* Mix visual */}
-      <div className="grid grid-cols-3 gap-3 mb-4">
-        <div className="flex-1 bg-[#F0FDF4] rounded-xl p-4 border border-[#DCFCE7] text-center">
-          <p className="text-2xl font-bold text-[#16A34A]">{Math.round(pctCasa * 100)}%</p>
-          <p className="text-xs text-[#6B7280] mt-1">Carga domiciliaria</p>
-          <p className="text-[10px] text-[#9CA3AF]">$250/kWh</p>
-        </div>
-        {pctPublica > 0 ? (
-          <div className="bg-[#F9FAFB] rounded-xl p-4 border border-[#E5E7EB] text-center">
-            <p className="text-2xl font-bold text-[#374151]">{Math.round(pctPublica * 100)}%</p>
-            <p className="text-xs text-[#6B7280] mt-1">Carga pública</p>
-            <p className="text-[10px] text-[#9CA3AF]">$450/kWh</p>
-          </div>
-        ) : (
-          <div className="bg-[#F9FAFB] rounded-xl p-4 border border-[#E5E7EB] text-center opacity-30">
-            <p className="text-2xl font-bold text-[#374151]">0%</p>
-            <p className="text-xs text-[#6B7280] mt-1">Carga pública</p>
-            <p className="text-[10px] text-[#9CA3AF]">No necesaria</p>
-          </div>
-        )}
-        <div className="bg-[#FFF7ED] rounded-xl p-4 border border-[#FED7AA] text-center">
-          <p className="text-2xl font-bold text-[#92400E]">
-            {formatCLP(precioKwhEfectivo)}
-          </p>
-          <p className="text-xs text-[#6B7280] mt-1">$/kWh efectivo</p>
-          <p className="text-[10px] text-[#9CA3AF]">Costo energía</p>
-        </div>
+      {/* Supuestos fijos */}
+      <div className="flex items-center gap-2 mb-4 bg-[#F9FAFB] border border-[#E5E7EB] rounded-xl px-4 py-2.5">
+        <span className="text-xs text-[#6B7280]">
+          Estimación basada en{' '}
+          <strong className="text-[#374151]">6 horas</strong> de carga nocturna y{' '}
+          <strong className="text-[#374151]">5 km/kWh</strong> de rendimiento.
+        </span>
       </div>
 
-      <p className="text-sm text-[#374151] leading-relaxed">{mensajeCarga}</p>
+      {/* Card del cargador según tramo */}
+      <div className={`rounded-xl p-4 border ${info.colorBg} ${info.colorBorder} mb-4`}>
+        <p className={`text-sm font-semibold mb-1 ${info.colorText}`}>{info.titulo}</p>
+        <p className="text-xs text-[#374151] leading-relaxed">{info.desc}</p>
+      </div>
 
-      <div className="mt-3 flex items-center gap-2 text-xs text-[#6B7280]">
+      {/* Costo mensual de energía */}
+      <div className="flex items-center gap-2 text-xs text-[#6B7280]">
         <span className="text-[#16A34A]">→</span>
         Costo mensual estimado de energía:{' '}
-        <strong className="text-[#374151] ml-1">{formatCLP(result.costoEnergiaEVMes)}</strong>
+        <strong className="text-[#374151] ml-1">{formatCLP(costoEnergiaEVMes)}</strong>
       </div>
     </Card>
   );
@@ -497,7 +493,7 @@ export default function Resultado() {
           {registered ? (
             // Revelado completo
             <div className="flex flex-col gap-6">
-              <SeccionCarga result={result} kmDia={simData.kmDia} />
+              <SeccionCarga result={result} />
               <SeccionGrafico result={result} />
               <SeccionIndicadores result={result} />
             </div>
@@ -505,7 +501,7 @@ export default function Resultado() {
             // Paywall
             <PaywallBlur onRegistrar={() => setShowModal(true)}>
               <div className="flex flex-col gap-6">
-                <SeccionCarga result={result} kmDia={simData.kmDia} />
+                <SeccionCarga result={result} />
                 <SeccionGrafico result={result} />
                 <SeccionIndicadores result={result} />
               </div>

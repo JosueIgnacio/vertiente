@@ -1,4 +1,4 @@
-import type { DiagnosticoData, TCOResult, MixCarga } from '../types';
+import type { DiagnosticoData, TCOResult, InfoCarga } from '../types';
 import {
   PRECIO_BENCINA,
   PRECIO_ELECTRICIDAD_CASA,
@@ -8,31 +8,51 @@ import {
   REVENTA_COMBUSTION,
   MANTENCION_EV_MENSUAL,
   DIAS_POR_MES,
+  POTENCIA_CARGADOR_VIAJE,
+  POTENCIA_CARGADOR_DOMICILIARIO,
+  COSTO_CARGADOR_ESTANDAR,
+  UMBRAL_KM_SOLO_VIAJE,
+  UMBRAL_KM_CARGA_PUBLICA,
 } from '../data/mockDefaults';
 
 /**
- * Determina el mix de carga automáticamente según los km/día.
- * El usuario no elige; se asigna según su perfil de uso.
+ * Determina el tramo de carga e información asociada según km/día.
+ * Lógica física alineada con SEC y Estudio de Costos AgenciaSE 2026:
+ *   ≤ 70 km/día  → viaje (enchufe 2,3 kW, sin instalación especial)
+ *   71–200 km/día → domiciliario (cargador 7,4 kW, costo $1.900.000)
+ *   > 200 km/día  → mixto (7,4 kW en casa + excedente en red pública)
  */
-export function calcularMixCarga(kmDia: number): MixCarga {
-  let pctCasa: number;
-  let pctPublica: number;
-
-  if (kmDia < 100) {
-    pctCasa = 1.0;
-    pctPublica = 0.0;
-  } else if (kmDia < 200) {
-    pctCasa = 0.7;
-    pctPublica = 0.3;
+export function calcularInfoCarga(kmDia: number): InfoCarga {
+  if (kmDia <= UMBRAL_KM_SOLO_VIAJE) {
+    const kmMes = kmDia * DIAS_POR_MES;
+    return {
+      tramo: 'viaje',
+      potenciaCargador: POTENCIA_CARGADOR_VIAJE,
+      costoInstalacion: 0,
+      energiaDomiciliariaKwMes: kmMes / CONSUMO_EV_KM_KWH,
+      energiaPublicaKwMes: 0,
+    };
+  } else if (kmDia <= UMBRAL_KM_CARGA_PUBLICA) {
+    const kmMes = kmDia * DIAS_POR_MES;
+    return {
+      tramo: 'domiciliario',
+      potenciaCargador: POTENCIA_CARGADOR_DOMICILIARIO,
+      costoInstalacion: COSTO_CARGADOR_ESTANDAR,
+      energiaDomiciliariaKwMes: kmMes / CONSUMO_EV_KM_KWH,
+      energiaPublicaKwMes: 0,
+    };
   } else {
-    pctCasa = 0.5;
-    pctPublica = 0.5;
+    // Primeros 200 km/día en casa, excedente en red pública
+    const kmHomeMes    = UMBRAL_KM_CARGA_PUBLICA * DIAS_POR_MES;
+    const kmPublicoMes = (kmDia - UMBRAL_KM_CARGA_PUBLICA) * DIAS_POR_MES;
+    return {
+      tramo: 'mixto',
+      potenciaCargador: POTENCIA_CARGADOR_DOMICILIARIO,
+      costoInstalacion: COSTO_CARGADOR_ESTANDAR,
+      energiaDomiciliariaKwMes: kmHomeMes / CONSUMO_EV_KM_KWH,
+      energiaPublicaKwMes: kmPublicoMes / CONSUMO_EV_KM_KWH,
+    };
   }
-
-  const precioKwhEfectivo =
-    pctCasa * PRECIO_ELECTRICIDAD_CASA + pctPublica * PRECIO_ELECTRICIDAD_PUBLICA;
-
-  return { pctCasa, pctPublica, precioKwhEfectivo };
 }
 
 /**
@@ -45,13 +65,20 @@ export function calcularTCO(data: DiagnosticoData): TCOResult {
   // ── Kilómetros mensuales ────────────────────────────────────────────────────
   const kmMes = kmDia * DIAS_POR_MES;
 
-  // ── Costos combustión ────────────────────────────────────────────────────────
-  const costoCombustibleMes = (kmMes / rendimientoKmL) * PRECIO_BENCINA;
+  // ── Costos combustión ───────────────────────────────────────────────────────
+  const costoCombustibleMes    = (kmMes / rendimientoKmL) * PRECIO_BENCINA;
   const mantencionCombustionMes = mantencionAnual / 12;
 
-  // ── Mix y costo energía EV ──────────────────────────────────────────────────
-  const mixCarga = calcularMixCarga(kmDia);
-  const costoEnergiaEVMes = (kmMes / CONSUMO_EV_KM_KWH) * mixCarga.precioKwhEfectivo;
+  // ── Infraestructura y costo energía EV ─────────────────────────────────────
+  const infoCarga = calcularInfoCarga(kmDia);
+  const costoEnergiaEVMes =
+    infoCarga.energiaDomiciliariaKwMes * PRECIO_ELECTRICIDAD_CASA +
+    infoCarga.energiaPublicaKwMes      * PRECIO_ELECTRICIDAD_PUBLICA;
+  const costoInstalacion = infoCarga.costoInstalacion;
+
+  // ── Inversión neta ──────────────────────────────────────────────────────────
+  // Se descuenta la reventa del auto a combustión y se suma la instalación
+  const inversionNetaEV = PRECIO_EV_ESTANDAR - REVENTA_COMBUSTION + costoInstalacion;
 
   // ── Ahorro operacional ──────────────────────────────────────────────────────
   const ahorroOperacionalMes =
@@ -60,27 +87,20 @@ export function calcularTCO(data: DiagnosticoData): TCOResult {
 
   const ahorroA5Anios = ahorroOperacionalMes * 60; // 60 meses
 
-  // ── Inversión neta ──────────────────────────────────────────────────────────
-  // Se descuenta la reventa del auto a combustión actual
-  const inversionNetaEV = PRECIO_EV_ESTANDAR - REVENTA_COMBUSTION; // $12.000.000
-
   // ── Punto de equilibrio ─────────────────────────────────────────────────────
   const ahorroAnual = ahorroOperacionalMes * 12;
   const puntoEquilibrioAnios =
     ahorroAnual > 0 ? inversionNetaEV / ahorroAnual : 99;
 
-  // ── Series para el gráfico ───────────────────────────────────────────────
+  // ── Series para el gráfico ──────────────────────────────────────────────────
   // Combustión: parte en $0 (el usuario ya tiene el auto) + costos operacionales
   // Eléctrico:  parte en inversionNetaEV + costos operacionales acumulados
   //
-  // Las series incluyen mes 0 (puntos de partida visuales) y se extienden
-  // dinámicamente para que el cruce siempre quede visible:
-  //   totalMeses = max(60, mesCruce + 12), cap 120 meses (10 años)
+  // totalMeses = max(60, mesCruce + 12), cap 120 meses (10 años)
 
   const costoOpCombustionMes = costoCombustibleMes + mantencionCombustionMes;
-  const costoOpEVMes = costoEnergiaEVMes + MANTENCION_EV_MENSUAL;
+  const costoOpEVMes         = costoEnergiaEVMes + MANTENCION_EV_MENSUAL;
 
-  // Mes exacto del cruce calculado algebraicamente
   const mesesHastaCruce =
     ahorroOperacionalMes > 0
       ? Math.ceil(inversionNetaEV / ahorroOperacionalMes)
@@ -91,7 +111,6 @@ export function calcularTCO(data: DiagnosticoData): TCOResult {
     Math.max(60, mesesHastaCruce !== null ? mesesHastaCruce + 12 : 60)
   );
 
-  // Mes 0: combustión en $0, eléctrico en inversionNetaEV (puntos de partida)
   const serieCombustion: { mes: number; costo: number }[] = [{ mes: 0, costo: 0 }];
   const serieElectrico:  { mes: number; costo: number }[] = [{ mes: 0, costo: inversionNetaEV }];
 
@@ -109,7 +128,8 @@ export function calcularTCO(data: DiagnosticoData): TCOResult {
     ahorroA5Anios,
     inversionNetaEV,
     puntoEquilibrioAnios,
-    mixCarga,
+    infoCarga,
+    costoInstalacion,
     serieCombustion,
     serieElectrico,
     totalMeses,
