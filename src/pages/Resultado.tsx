@@ -174,21 +174,28 @@ function SeccionAlternativa({ infoCarga }: { infoCarga: InfoCarga }) {
 function SeccionCarga({ result }: { result: ReturnType<typeof calcularTCO> }) {
   const { infoCarga, costoEnergiaEVMes } = result;
 
-  const tramoInfo: Record<InfoCarga['tramo'], { titulo: string; desc: string; colorBg: string; colorBorder: string; colorText: string }> = {
+  const tramoInfo: Record<InfoCarga['tramo'], {
+    titulo: string; desc: string;
+    colorBg: string; colorBorder: string; colorText: string;
+    chipBg: string; chipText: string; chipLabel: string;
+  }> = {
     viaje: {
       titulo: 'Cargador de viaje (2,3 kW)',
       desc: 'Enchufe estándar doméstico. No requiere instalación especial ni inversión adicional.',
       colorBg: 'bg-[#F0FDF4]', colorBorder: 'border-[#DCFCE7]', colorText: 'text-[#15803D]',
+      chipBg: 'bg-[#DCFCE7]', chipText: 'text-[#15803D]', chipLabel: 'Viaje',
     },
     domiciliario: {
       titulo: 'Cargador domiciliario dedicado (7,4 kW)',
       desc: 'Requiere instalación eléctrica certificada. Costo estándar estimado: $1.900.000 (fuente: AgenciaSE 2026).',
       colorBg: 'bg-[#EFF6FF]', colorBorder: 'border-[#BFDBFE]', colorText: 'text-[#1D4ED8]',
+      chipBg: 'bg-[#DBEAFE]', chipText: 'text-[#1D4ED8]', chipLabel: 'Domiciliario',
     },
     mixto: {
       titulo: 'Cargador domiciliario (7,4 kW) + carga pública',
       desc: 'Tu kilometraje supera lo que cubre la carga nocturna en casa. El excedente diario se cubre en la red pública. Costo de instalación estimado: $1.900.000 (AgenciaSE 2026).',
       colorBg: 'bg-[#FFFBEB]', colorBorder: 'border-[#FDE68A]', colorText: 'text-[#92400E]',
+      chipBg: 'bg-[#FEF3C7]', chipText: 'text-[#92400E]', chipLabel: 'Mixto',
     },
   };
 
@@ -201,6 +208,9 @@ function SeccionCarga({ result }: { result: ReturnType<typeof calcularTCO> }) {
           <Plug className="w-4 h-4" />
         </div>
         <h2 className="font-semibold text-[#111827]">Tu tipo de carga recomendado</h2>
+        <span className={`ml-auto text-[10px] font-semibold px-2 py-0.5 rounded-full ${info.chipBg} ${info.chipText}`}>
+          {info.chipLabel}
+        </span>
       </div>
 
       {/* Supuestos fijos */}
@@ -231,6 +241,7 @@ function SeccionCarga({ result }: { result: ReturnType<typeof calcularTCO> }) {
 // ── Sección 3: Gráfico TCO ────────────────────────────────────────────────────
 
 function SeccionGrafico({ result }: { result: ReturnType<typeof calcularTCO> }) {
+  const conInstalacion = result.infoCarga.tramo !== 'viaje';
   return (
     <Card padding="lg">
       <div className="flex items-start justify-between mb-1 gap-2">
@@ -242,8 +253,10 @@ function SeccionGrafico({ result }: { result: ReturnType<typeof calcularTCO> }) 
       <p className="text-xs text-[#9CA3AF] mb-2">
         La curva eléctrica parte en{' '}
         <strong className="text-[#374151]">{formatCLPMillon(result.inversionNetaEV)}</strong>{' '}
-        (no en {formatCLPMillon(PRECIO_EV_ESTANDAR)}), porque se descuenta la reventa
-        estimada de tu auto a combustión ({formatCLPMillon(REVENTA_COMBUSTION)}).
+        porque se descuenta la reventa estimada de tu auto ({formatCLPMillon(REVENTA_COMBUSTION)})
+        {conInstalacion && (
+          <> y se suma la instalación del cargador ({formatCLPMillon(result.costoInstalacion)})</>
+        )}.
       </p>
       <TCOChart result={result} />
       <div className="flex flex-col sm:flex-row flex-wrap gap-2 sm:gap-4 mt-3 text-xs text-[#9CA3AF]">
@@ -474,7 +487,7 @@ function EstimadorInstalacion({ infoCarga: _infoCarga }: { infoCarga: InfoCarga 
 const PROXIMOS_PASOS = [
   { icon: <Plug className="w-4 h-4" />, titulo: 'Validar factibilidad de carga', desc: 'Revisa si tu vivienda o empresa puede instalar un cargador domiciliario.' },
   { icon: <Car className="w-4 h-4" />, titulo: 'Comparar modelos eléctricos recomendados', desc: 'Evalúa opciones con mayor autonomía y disponibilidad en Chile.' },
-  { icon: <Wrench className="w-4 h-4" />, titulo: 'Cotizar instalación del cargador', desc: 'Una instalación domiciliaria tipo Wall Box oscila entre $600.000 y $1.200.000.' },
+  { icon: <Wrench className="w-4 h-4" />, titulo: 'Cotizar instalación del cargador', desc: 'El costo estándar referencial es ~$1.900.000 (AgenciaSE 2026). Usa el estimador para afinar según tu vivienda.' },
   { icon: <CreditCard className="w-4 h-4" />, titulo: 'Evaluar financiamiento, leasing o renting', desc: 'Hay alternativas que mejoran el flujo de caja sin desembolso inicial alto.' },
   { icon: <Users className="w-4 h-4" />, titulo: 'Conectar con proveedores y dar el salto', desc: 'Coordina la instalación y programa la transición a tu ritmo.' },
 ];
