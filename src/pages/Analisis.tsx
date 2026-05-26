@@ -9,7 +9,14 @@ import Button from '../components/ui/Button';
 import Badge from '../components/ui/Badge';
 import Stepper from '../components/ui/Stepper';
 import { calcularTCO } from '../lib/tco';
-import { DIAGNOSTICO_DEFAULTS } from '../data/mockDefaults';
+import { formatCLPMillon } from '../lib/format';
+import {
+  DIAGNOSTICO_DEFAULTS,
+  INSTALACION_BASE, INSTALACION_ACOMETIDA_REF, INSTALACION_COSTO_POR_METRO_ACOMETIDA,
+  INSTALACION_DIST_INTERNA_REF, INSTALACION_COSTO_POR_METRO_INTERNO,
+  INSTALACION_RECARGO_SOTERRADO, INSTALACION_RECARGO_EMPALME_DEDICADO,
+  INSTALACION_MARGEN_RANGO,
+} from '../data/mockDefaults';
 import type { DiagnosticoData, InfoCarga } from '../types';
 
 // ── Carga de datos ─────────────────────────────────────────────────────────────
@@ -51,20 +58,172 @@ interface AnalisisState {
 
 const PASOS_LABELS = ['Carga', 'Modelos', 'Financiamiento', 'Proveedores'];
 
-// ── Vistas placeholder ─────────────────────────────────────────────────────────
+// ── Estimador de instalación ──────────────────────────────────────────────────
 
-function Vista1Placeholder({ infoCarga }: { infoCarga: InfoCarga }) {
+function calcularRangoInstalacion(
+  distAcometida: number,
+  distInterna: number,
+  canalizacion: AnalisisState['canalizacion'],
+  conexion: AnalisisState['conexion'],
+): { min: number; max: number } {
+  const base =
+    INSTALACION_BASE +
+    (distAcometida - INSTALACION_ACOMETIDA_REF) * INSTALACION_COSTO_POR_METRO_ACOMETIDA +
+    (distInterna   - INSTALACION_DIST_INTERNA_REF) * INSTALACION_COSTO_POR_METRO_INTERNO +
+    (canalizacion === 'soterrada' ? INSTALACION_RECARGO_SOTERRADO : 0) +
+    (conexion     === 'dedicado'  ? INSTALACION_RECARGO_EMPALME_DEDICADO : 0);
+  const piso = Math.max(base, 1_200_000);
+  const min  = Math.round(piso * (1 - INSTALACION_MARGEN_RANGO) / 1000) * 1000;
+  const max  = Math.round(piso * (1 + INSTALACION_MARGEN_RANGO) / 1000) * 1000;
+  return { min, max };
+}
+
+interface Vista1Props {
+  infoCarga: InfoCarga;
+  state: AnalisisState;
+  set: (p: Partial<AnalisisState>) => void;
+}
+
+function Vista1Estimador({ infoCarga, state, set }: Vista1Props) {
+  const esViaje       = infoCarga.tramo === 'viaje';
+  const mostrarForm   = !esViaje || state.quiereInstalacion;
+  const { min, max }  = calcularRangoInstalacion(
+    state.distAcometida, state.distInterna, state.canalizacion, state.conexion
+  );
+
+  const chipColor = {
+    viaje:       { bg: 'bg-[#DCFCE7]', text: 'text-[#15803D]' },
+    domiciliario: { bg: 'bg-[#DBEAFE]', text: 'text-[#1D4ED8]' },
+    mixto:       { bg: 'bg-[#FEF3C7]', text: 'text-[#92400E]' },
+  }[infoCarga.tramo];
+
   return (
     <Card padding="lg">
-      <div className="flex items-center gap-2 mb-4">
+      <div className="flex items-center gap-2 mb-5">
         <Zap className="w-5 h-5 text-[#16A34A]" />
-        <h2 className="font-semibold text-[#111827]">Estimador de instalación de carga</h2>
-        <Badge variant="verde" className="ml-auto text-[10px]">Paso 1</Badge>
+        <h2 className="font-semibold text-[#111827]">Factibilidad de instalación de carga</h2>
+        <span className={`ml-auto text-[10px] font-semibold px-2 py-0.5 rounded-full capitalize ${chipColor.bg} ${chipColor.text}`}>
+          {infoCarga.tramo}
+        </span>
       </div>
-      <p className="text-sm text-[#6B7280]">
-        Tramo detectado: <strong className="text-[#111827]">{infoCarga.tramo}</strong>.
-        Aquí irá el estimador de instalación (Etapa 2).
-      </p>
+
+      {/* Caso viaje: checkbox opcional */}
+      {esViaje && (
+        <div className="mb-5 bg-[#F0FDF4] border border-[#DCFCE7] rounded-xl px-4 py-4">
+          <p className="text-sm text-[#374151] mb-3 leading-relaxed">
+            Según tu operación diaria (<strong>{infoCarga.tramo}</strong> ≤ 70 km/día) no
+            requieres un cargador de 7,4 kW — basta el enchufe doméstico estándar.
+          </p>
+          <label className="flex items-start gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={state.quiereInstalacion}
+              onChange={(e) => set({ quiereInstalacion: e.target.checked })}
+              className="mt-0.5 w-4 h-4 accent-[#16A34A] cursor-pointer"
+            />
+            <span className="text-sm text-[#374151]">
+              Quiero igual estimar el costo de instalar un cargador dedicado e incluirlo en la evaluación.
+            </span>
+          </label>
+        </div>
+      )}
+
+      {/* Formulario de 4 variables */}
+      {mostrarForm && (
+        <>
+          <p className="text-xs text-[#6B7280] mb-4 leading-relaxed">
+            Ajusta los parámetros de tu vivienda para obtener un rango referencial de costo de instalación.
+          </p>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
+
+            {/* Distancia acometida */}
+            <div>
+              <label className="block text-xs font-medium text-[#374151] mb-1.5">
+                Dist. acometida (calle → medidor)
+              </label>
+              <div className="flex items-center border border-[#E5E7EB] rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-[#16A34A] focus-within:border-transparent transition-all">
+                <input
+                  type="number" min={0} max={200} value={state.distAcometida}
+                  onChange={(e) => set({ distAcometida: Number(e.target.value) })}
+                  className="flex-1 px-4 py-2.5 text-sm text-[#111827] outline-none bg-white min-w-0"
+                />
+                <span className="px-3 bg-[#F9FAFB] border-l border-[#E5E7EB] text-xs text-[#6B7280] py-2.5 shrink-0">metros</span>
+              </div>
+            </div>
+
+            {/* Distancia interna */}
+            <div>
+              <label className="block text-xs font-medium text-[#374151] mb-1.5">
+                Dist. interna (medidor → estacionamiento)
+              </label>
+              <div className="flex items-center border border-[#E5E7EB] rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-[#16A34A] focus-within:border-transparent transition-all">
+                <input
+                  type="number" min={0} max={200} value={state.distInterna}
+                  onChange={(e) => set({ distInterna: Number(e.target.value) })}
+                  className="flex-1 px-4 py-2.5 text-sm text-[#111827] outline-none bg-white min-w-0"
+                />
+                <span className="px-3 bg-[#F9FAFB] border-l border-[#E5E7EB] text-xs text-[#6B7280] py-2.5 shrink-0">metros</span>
+              </div>
+            </div>
+
+            {/* Tipo canalización */}
+            <div>
+              <label className="block text-xs font-medium text-[#374151] mb-1.5">
+                Tipo de canalización
+              </label>
+              <select
+                value={state.canalizacion}
+                onChange={(e) => set({ canalizacion: e.target.value as AnalisisState['canalizacion'] })}
+                className="w-full px-4 py-2.5 text-sm text-[#111827] border border-[#E5E7EB] rounded-xl bg-white outline-none focus:ring-2 focus:ring-[#16A34A] focus:border-transparent transition-all cursor-pointer"
+              >
+                <option value="sobrepuesta">Sobrepuesta (tubo o canaleta visible)</option>
+                <option value="soterrada">Soterrada (enterrada o embutida)</option>
+              </select>
+            </div>
+
+            {/* Tipo conexión */}
+            <div>
+              <label className="block text-xs font-medium text-[#374151] mb-1.5">
+                Tipo de conexión al empalme
+              </label>
+              <select
+                value={state.conexion}
+                onChange={(e) => set({ conexion: e.target.value as AnalisisState['conexion'] })}
+                className="w-full px-4 py-2.5 text-sm text-[#111827] border border-[#E5E7EB] rounded-xl bg-white outline-none focus:ring-2 focus:ring-[#16A34A] focus:border-transparent transition-all cursor-pointer"
+              >
+                <option value="ampliacion">Ampliación del empalme existente</option>
+                <option value="dedicado">Empalme dedicado exclusivo</option>
+              </select>
+            </div>
+
+          </div>
+
+          {/* Resultado */}
+          <div className="bg-[#F0FDF4] border border-[#BBF7D0] rounded-xl px-5 py-4 mb-4">
+            <p className="text-xs text-[#6B7280] mb-1">Rango estimado de instalación</p>
+            <p className="text-2xl font-bold text-[#0F3D2E]">
+              {formatCLPMillon(min)} – {formatCLPMillon(max)}
+            </p>
+            <p className="text-[10px] text-[#9CA3AF] mt-1.5">
+              Estimación referencial, no es una cotización. Fuente: AgenciaSE 2026.
+            </p>
+          </div>
+
+          <p className="text-xs text-[#6B7280] leading-relaxed">
+            Al continuar, usaremos el valor medio del rango (
+            <strong className="text-[#374151]">{formatCLPMillon(Math.round((min + max) / 2 / 1000) * 1000)}</strong>)
+            en el cálculo de recuperación de inversión de los modelos.
+          </p>
+        </>
+      )}
+
+      {/* Sin instalación */}
+      {!mostrarForm && (
+        <p className="text-sm text-[#6B7280]">
+          No se suma costo de instalación a la evaluación. Puedes activar la casilla anterior si quieres incluirlo.
+        </p>
+      )}
     </Card>
   );
 }
@@ -160,7 +319,18 @@ export default function Analisis() {
   };
 
   const handleContinuar = () => {
-    if (state.paso < 4) {
+    if (state.paso === 1) {
+      // Fijar costo de instalación antes de pasar a Vista 2
+      const mostrarForm = tcoResult.infoCarga.tramo !== 'viaje' || state.quiereInstalacion;
+      let costoFinal = 0;
+      if (mostrarForm) {
+        const { min, max } = calcularRangoInstalacion(
+          state.distAcometida, state.distInterna, state.canalizacion, state.conexion
+        );
+        costoFinal = Math.round((min + max) / 2 / 1000) * 1000;
+      }
+      set({ paso: 2, costoInstalacionFinal: costoFinal });
+    } else if (state.paso < 4) {
       set({ paso: (state.paso + 1) as AnalisisState['paso'] });
     }
   };
@@ -202,7 +372,9 @@ export default function Analisis() {
 
           {/* Contenido del paso actual */}
           <div className="mb-8">
-            {state.paso === 1 && <Vista1Placeholder infoCarga={tcoResult.infoCarga} />}
+            {state.paso === 1 && (
+              <Vista1Estimador infoCarga={tcoResult.infoCarga} state={state} set={set} />
+            )}
             {state.paso === 2 && <Vista2Placeholder />}
             {state.paso === 3 && <Vista3Placeholder />}
             {state.paso === 4 && <Vista4Placeholder />}
