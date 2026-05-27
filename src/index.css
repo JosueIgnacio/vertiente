@@ -21,6 +21,25 @@
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
 }
 
+@keyframes shimmer-slide {
+  0%   { transform: translateX(-120%) skewX(-12deg); }
+  100% { transform: translateX(220%)  skewX(-12deg); }
+}
+
+.cta-shimmer::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    105deg,
+    transparent 35%,
+    rgba(255,255,255,0.18) 50%,
+    transparent 65%
+  );
+  animation: shimmer-slide 3.2s ease-in-out infinite;
+  pointer-events: none;
+}
+
 *, *::before, *::after {
   box-sizing: border-box;
 }

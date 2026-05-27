@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import {
   ArrowRight, RotateCcw, Zap, BatteryCharging, TrendingDown, Clock,
   Banknote, Lock, X, Plug, Car, Wrench, CreditCard, Users,
-  Bookmark, FileText, Building2, ChevronRight,
+  Bookmark, ChevronRight,
 } from 'lucide-react';
 import Navbar from '../components/layout/Navbar';
 import Footer from '../components/layout/Footer';
@@ -394,7 +394,7 @@ const PROXIMOS_PASOS = [
   { icon: <Users className="w-4 h-4" />, titulo: 'Conectar con proveedores y dar el salto', desc: 'Coordina la instalación y programa la transición a tu ritmo.' },
 ];
 
-function RutaRecomendada({ infoCarga }: { infoCarga: InfoCarga }) {
+function RutaRecomendada({ infoCarga: _infoCarga }: { infoCarga: InfoCarga }) {
   const navigate = useNavigate();
   const [pagando, setPagando] = useState(false);
 
@@ -428,63 +428,136 @@ function RutaRecomendada({ infoCarga }: { infoCarga: InfoCarga }) {
         </div>
       </Card>
 
-      {/* 3 CTAs */}
+      {/* CTAs hero */}
       <div>
-        <h2 className="font-bold text-[#111827] text-base mb-3">¿Qué quieres hacer ahora?</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <h2 className="font-bold text-[#111827] text-base mb-4">¿Qué quieres hacer ahora?</h2>
 
-          {/* Guardar simulación */}
-          <button
-            type="button"
-            className="text-left rounded-2xl border border-[#E5E7EB] p-5 hover:shadow-md hover:-translate-y-0.5 transition-all duration-150 cursor-pointer bg-white"
-          >
-            <Bookmark className="w-5 h-5 text-[#6B7280] mb-3" />
-            <p className="font-semibold text-sm text-[#111827] mb-1">Guardar mi simulación</p>
-            <p className="text-xs text-[#6B7280] leading-relaxed mb-3">
-              Recibe tu análisis por correo para revisarlo cuando quieras.
-            </p>
-            <span className="text-xs font-semibold text-[#16A34A]">Gratis</span>
-          </button>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 mb-4">
 
-          {/* Análisis completo */}
+          {/* ── Análisis completo ── */}
           <button
             type="button"
             onClick={handleAnalisis}
             disabled={pagando}
-            className="text-left rounded-2xl border-2 border-[#0F3D2E] p-5 hover:shadow-md hover:-translate-y-0.5 transition-all duration-150 bg-white relative overflow-hidden cursor-pointer disabled:opacity-70 disabled:cursor-wait"
+            className="cta-shimmer relative overflow-hidden rounded-3xl p-7 text-left cursor-pointer disabled:opacity-60 disabled:cursor-wait transition-all duration-300 hover:scale-[1.02] hover:-translate-y-1 active:scale-[0.99]"
+            style={{
+              background: 'linear-gradient(140deg, #052e16 0%, #14532d 40%, #166534 70%, #15803d 100%)',
+              boxShadow: '0 16px 48px rgba(22,163,74,0.45), 0 4px 16px rgba(0,0,0,0.25)',
+            }}
           >
-            <div className="absolute top-3 right-3">
-              <Badge variant="verde" className="text-[10px]">Recomendado</Badge>
-            </div>
-            <FileText className="w-5 h-5 text-[#0F3D2E] mb-3" />
-            <p className="font-semibold text-sm text-[#111827] mb-1">Análisis completo</p>
-            <p className="text-xs text-[#6B7280] leading-relaxed mb-3">
-              Factibilidad de carga, comparación de modelos,{infoCarga.tramo !== 'viaje' ? ' cotización de instalación,' : ''} financiamiento y contacto con proveedores.
-            </p>
-            <div className="flex items-center gap-2">
-              <span className="text-base font-bold text-[#0F3D2E]">
-                {pagando ? 'Procesando pago…' : '$14.990'}
+            {/* Badge */}
+            <div className="flex items-center justify-between mb-5">
+              <span className="inline-flex items-center gap-1.5 bg-white/15 backdrop-blur-sm text-white text-[11px] font-bold px-3 py-1 rounded-full border border-white/20">
+                <Zap className="w-3 h-3" /> Recomendado
               </span>
-              {!pagando && <span className="text-xs text-[#9CA3AF] line-through">$29.990</span>}
+              {!pagando && (
+                <span className="text-white/40 text-xs line-through">$29.990</span>
+              )}
+            </div>
+
+            {/* Título */}
+            <div className="mb-5">
+              <p className="text-white/70 text-[11px] font-semibold uppercase tracking-widest mb-1">Análisis completo</p>
+              <p className="text-white font-black text-2xl leading-snug">
+                Tu plan personalizado<br />para el salto eléctrico
+              </p>
+            </div>
+
+            {/* Features */}
+            <div className="grid grid-cols-2 gap-x-4 gap-y-2 mb-6">
+              {[
+                'Factibilidad de carga',
+                'Comparativa de modelos',
+                'Simulador de crédito',
+                'Contacto con proveedores',
+              ].map((f) => (
+                <div key={f} className="flex items-center gap-1.5">
+                  <div className="w-1.5 h-1.5 rounded-full bg-[#4ade80] shrink-0" />
+                  <span className="text-white/75 text-xs leading-tight">{f}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Precio + CTA */}
+            <div className="flex items-end justify-between gap-3">
+              <div>
+                <p className="text-white/50 text-[10px] uppercase tracking-wider mb-0.5">Precio especial</p>
+                <p className="text-white font-black text-3xl leading-none">
+                  {pagando ? 'Procesando…' : '$14.990'}
+                </p>
+              </div>
+              <div className="flex items-center gap-2 bg-white text-[#0F3D2E] font-bold text-sm px-5 py-3 rounded-2xl shrink-0 shadow-lg">
+                {pagando ? 'Un momento' : 'Comenzar'}
+                {!pagando && <ArrowRight className="w-4 h-4" />}
+              </div>
             </div>
           </button>
 
-          {/* Asesoría pyme */}
+          {/* ── Asesoría pyme ── */}
           <Link
             to="/pyme"
-            className="text-left rounded-2xl border border-[#FDE047] bg-[#FEFCE8] p-5 hover:shadow-md hover:-translate-y-0.5 transition-all duration-150 no-underline"
+            className="cta-shimmer relative overflow-hidden rounded-3xl p-7 text-left no-underline block transition-all duration-300 hover:scale-[1.02] hover:-translate-y-1 active:scale-[0.99]"
+            style={{
+              background: 'linear-gradient(140deg, #431407 0%, #7c2d12 35%, #9a3412 65%, #b45309 100%)',
+              boxShadow: '0 16px 48px rgba(245,158,11,0.40), 0 4px 16px rgba(0,0,0,0.25)',
+            }}
           >
-            <Building2 className="w-5 h-5 text-[#92400E] mb-3" />
-            <p className="font-semibold text-sm text-[#111827] mb-1">Quiero asesoría pyme</p>
-            <p className="text-xs text-[#6B7280] leading-relaxed mb-3">
-              Diagnóstico de flota completo con informe personalizado y reuniones de acompañamiento.
-            </p>
-            <span className="text-xs font-semibold text-[#92400E] flex items-center gap-1">
-              Desde $99.990 <ChevronRight className="w-3 h-3" />
-            </span>
+            {/* Badge dorado */}
+            <div className="flex items-center justify-between mb-5">
+              <span className="inline-flex items-center gap-1.5 text-[11px] font-bold px-3 py-1 rounded-full border"
+                style={{ background: 'rgba(251,191,36,0.2)', borderColor: 'rgba(251,191,36,0.4)', color: '#fde68a' }}>
+                <span>✦</span> Pyme Premium
+              </span>
+            </div>
+
+            {/* Título */}
+            <div className="mb-5">
+              <p className="text-[11px] font-semibold uppercase tracking-widest mb-1" style={{ color: 'rgba(253,230,138,0.7)' }}>
+                Asesoría empresarial
+              </p>
+              <p className="font-black text-2xl leading-snug" style={{ color: '#fef3c7' }}>
+                Diagnóstico completo<br />para flotas y empresas
+              </p>
+            </div>
+
+            {/* Features */}
+            <div className="grid grid-cols-2 gap-x-4 gap-y-2 mb-6">
+              {[
+                'Análisis de flota completo',
+                'Informe personalizado',
+                'Reuniones de acompañamiento',
+                'Contacto directo',
+              ].map((f) => (
+                <div key={f} className="flex items-center gap-1.5">
+                  <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: '#fbbf24' }} />
+                  <span className="text-xs leading-tight" style={{ color: 'rgba(254,243,199,0.75)' }}>{f}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Precio + CTA */}
+            <div className="flex items-end justify-between gap-3">
+              <div>
+                <p className="text-[10px] uppercase tracking-wider mb-0.5" style={{ color: 'rgba(253,230,138,0.5)' }}>Desde</p>
+                <p className="font-black text-3xl leading-none" style={{ color: '#fde68a' }}>$99.990</p>
+              </div>
+              <div className="flex items-center gap-2 font-bold text-sm px-5 py-3 rounded-2xl shrink-0 shadow-lg"
+                style={{ background: '#fbbf24', color: '#431407' }}>
+                Cotizar <ChevronRight className="w-4 h-4" />
+              </div>
+            </div>
           </Link>
 
         </div>
+
+        {/* Guardar simulación — opción secundaria discreta */}
+        <div className="flex items-center justify-center gap-2 py-2">
+          <Bookmark className="w-3.5 h-3.5 text-[#9CA3AF]" />
+          <button type="button" className="text-xs text-[#9CA3AF] hover:text-[#6B7280] transition-colors cursor-pointer">
+            Guardar mi simulación por correo (gratis)
+          </button>
+        </div>
+
       </div>
     </div>
   );
