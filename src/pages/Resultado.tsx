@@ -346,10 +346,10 @@ function PaywallBlur({
       <div
         className="absolute inset-0 pointer-events-none select-none"
         style={{
-          filter: 'blur(5px)',
-          opacity: 0.9,
-          WebkitMaskImage: 'linear-gradient(to bottom, transparent 0%, black 28%, black 100%)',
-          maskImage:        'linear-gradient(to bottom, transparent 0%, black 28%, black 100%)',
+          filter: 'blur(7px)',
+          opacity: 0.95,
+          WebkitMaskImage: 'linear-gradient(to bottom, transparent 0%, black 22%, black 100%)',
+          maskImage:        'linear-gradient(to bottom, transparent 0%, black 22%, black 100%)',
         }}
       >
         {children}
