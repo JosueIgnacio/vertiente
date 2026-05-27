@@ -527,27 +527,19 @@ export default function Resultado() {
         <Container narrow>
 
           {/* Encabezado */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
-            <div>
-              <div className="flex items-center gap-2 mb-2">
-                <Badge variant="verde">
-                  <Zap className="w-3 h-3" />
-                  Tu diagnóstico
-                </Badge>
-                <span className="text-xs text-[#9CA3AF]">
-                  {simData.region} · {simData.kmDia} km/día · {usoLabel}
-                </span>
-              </div>
-              <h1 className="text-2xl sm:text-3xl font-bold text-[#0F3D2E]">
-                Diagnóstico de electromovilidad
-              </h1>
+          <div className="mb-8">
+            <div className="flex items-center gap-2 mb-2">
+              <Badge variant="verde">
+                <Zap className="w-3 h-3" />
+                Tu diagnóstico
+              </Badge>
+              <span className="text-xs text-[#9CA3AF]">
+                {simData.region} · {simData.kmDia} km/día · {usoLabel}
+              </span>
             </div>
-            <Link to="/simulador">
-              <Button variant="outline" size="sm">
-                <RotateCcw className="w-4 h-4" />
-                Recalcular
-              </Button>
-            </Link>
+            <h1 className="text-2xl sm:text-3xl font-bold text-[#0F3D2E]">
+              Diagnóstico de electromovilidad
+            </h1>
           </div>
 
           {/* ── Sección 1: Alternativa eléctrica — siempre visible ── */}
@@ -574,8 +566,20 @@ export default function Resultado() {
             </PaywallBlur>
           )}
 
-          {/* ── Ruta recomendada (solo post-registro) ── */}
-          {registered && <RutaRecomendada infoCarga={result.infoCarga} />}
+          {/* ── Recalcular + Ruta recomendada (solo post-registro) ── */}
+          {registered && (
+            <>
+              <div className="mt-10 flex justify-start">
+                <Link to="/simulador">
+                  <Button variant="outline" size="sm">
+                    <RotateCcw className="w-4 h-4" />
+                    Recalcular
+                  </Button>
+                </Link>
+              </div>
+              <RutaRecomendada infoCarga={result.infoCarga} />
+            </>
+          )}
 
         </Container>
       </main>
