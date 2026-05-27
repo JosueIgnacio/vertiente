@@ -334,22 +334,36 @@ function PaywallBlur({
 }) {
   return (
     <div className="relative">
-      {/* Contenido difuminado */}
+      {/* Capa base: contenido sin blur, levemente atenuado — visible en la parte superior */}
       <div
         className="pointer-events-none select-none"
-        style={{ filter: 'blur(6px)', opacity: 0.7 }}
+        style={{ opacity: 0.6 }}
       >
         {children}
       </div>
 
-      {/* Overlay degradado + CTA */}
+      {/* Capa blur: se impone gradualmente desde ~25% hacia abajo */}
       <div
-        className="absolute inset-0 flex flex-col items-center justify-center rounded-2xl"
+        className="absolute inset-0 pointer-events-none select-none"
         style={{
-          background: 'linear-gradient(to bottom, rgba(249,250,251,0.3) 0%, rgba(249,250,251,0.92) 40%, rgba(249,250,251,1) 100%)',
+          filter: 'blur(5px)',
+          opacity: 0.9,
+          WebkitMaskImage: 'linear-gradient(to bottom, transparent 0%, black 28%, black 100%)',
+          maskImage:        'linear-gradient(to bottom, transparent 0%, black 28%, black 100%)',
         }}
       >
-        <div className="flex flex-col items-center gap-3 px-6 text-center">
+        {children}
+      </div>
+
+      {/* Overlay degradado: transparente al inicio, opaco a partir del 45% */}
+      <div
+        className="absolute inset-0 flex flex-col items-center justify-start rounded-2xl"
+        style={{
+          background: 'linear-gradient(to bottom, rgba(249,250,251,0) 0%, rgba(249,250,251,0) 18%, rgba(249,250,251,0.82) 42%, rgba(249,250,251,1) 62%)',
+        }}
+      >
+        {/* CTA posicionado al 28% desde el top */}
+        <div className="flex flex-col items-center gap-3 px-6 text-center mt-[28%]">
           <div className="w-12 h-12 rounded-full bg-[#0F3D2E] flex items-center justify-center shadow-lg">
             <Lock className="w-5 h-5 text-white" />
           </div>
