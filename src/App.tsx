@@ -3,7 +3,6 @@ import Home from './pages/Home';
 import Simulador from './pages/Simulador';
 import Resultado from './pages/Resultado';
 import Analisis from './pages/Analisis';
-import Ruta from './pages/Ruta';
 import Pyme from './pages/Pyme';
 import Comprobante from './pages/Comprobante';
 import ScrollToTop from './components/layout/ScrollToTop';
@@ -17,7 +16,6 @@ function App() {
         <Route path="/simulador" element={<Simulador />} />
         <Route path="/resultado" element={<Resultado />} />
         <Route path="/analisis" element={<Analisis />} />
-        <Route path="/ruta" element={<Ruta />} />
         <Route path="/pyme" element={<Pyme />} />
         <Route path="/comprobante" element={<Comprobante />} />
       </Routes>

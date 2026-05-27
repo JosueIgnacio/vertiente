@@ -23,9 +23,6 @@ export default function Footer() {
             <Link to="/pyme" className="hover:text-white transition-colors no-underline">
               Empresas y pymes
             </Link>
-            <Link to="/ruta" className="hover:text-white transition-colors no-underline">
-              Ruta recomendada
-            </Link>
           </div>
         </div>
 
