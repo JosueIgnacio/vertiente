@@ -218,7 +218,7 @@ function SeccionCarga({ result }: { result: ReturnType<typeof calcularTCO> }) {
         <div className="w-8 h-8 rounded-lg bg-[#F0FDF4] flex items-center justify-center text-[#16A34A]">
           <Plug className="w-4 h-4" />
         </div>
-        <h2 className="font-semibold text-[#111827]">Tu tipo de carga recomendado</h2>
+        <h2 className="font-semibold text-[#111827]">Tu tipo de carga recomendada</h2>
         <span className={`ml-auto text-[10px] font-semibold px-2 py-0.5 rounded-full ${info.chipBg} ${info.chipText}`}>
           {info.chipLabel}
         </span>
@@ -348,8 +348,8 @@ function PaywallBlur({
         style={{
           filter: 'blur(7px)',
           opacity: 0.95,
-          WebkitMaskImage: 'linear-gradient(to bottom, transparent 0%, black 22%, black 100%)',
-          maskImage:        'linear-gradient(to bottom, transparent 0%, black 22%, black 100%)',
+          WebkitMaskImage: 'linear-gradient(to bottom, rgba(0,0,0,0.45) 0%, black 12%, black 100%)',
+          maskImage:        'linear-gradient(to bottom, rgba(0,0,0,0.45) 0%, black 12%, black 100%)',
         }}
       >
         {children}
