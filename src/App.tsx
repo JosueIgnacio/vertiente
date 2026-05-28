@@ -4,6 +4,7 @@ import Simulador from './pages/Simulador';
 import Resultado from './pages/Resultado';
 import Analisis from './pages/Analisis';
 import Pyme from './pages/Pyme';
+import PymeDiagnostico from './pages/PymeDiagnostico';
 import Comprobante from './pages/Comprobante';
 import ScrollToTop from './components/layout/ScrollToTop';
 
@@ -17,6 +18,7 @@ function App() {
         <Route path="/resultado" element={<Resultado />} />
         <Route path="/analisis" element={<Analisis />} />
         <Route path="/pyme" element={<Pyme />} />
+        <Route path="/diagnostico-pyme" element={<PymeDiagnostico />} />
         <Route path="/comprobante" element={<Comprobante />} />
       </Routes>
     </BrowserRouter>

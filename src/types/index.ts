@@ -85,3 +85,85 @@ export interface Oferta {
   proveedorId: string;
   precio: number;
 }
+
+// ── Flujo diagnóstico pyme ─────────────────────────────────────────────────────
+
+export type Carroceria = 'citycar' | 'hatchback' | 'sedan' | 'suv' | 'pickup' | 'furgon';
+
+export interface TipoVehiculo {
+  id: string;
+  etiqueta: string;
+  carroceria: Carroceria;
+  cantidad: number;
+  antiguedadAnios: number;
+  kmDia: number;
+  horasOperacion: number;
+  rendimientoKmL: number;
+  mantencionAnual: number;
+}
+
+export interface DiagnosticoTipo {
+  tipo: TipoVehiculo;
+  ahorroMensualPorVehiculo: number;
+  ahorroMensualTotal: number;
+  reventaPorVehiculo: number;
+  inversionNetaPorVehiculo: number;
+  paybackBase: number;
+  ajusteAntiguedad: number;
+  paybackAjustado: number;
+  co2EvitadoPorVehiculo: number;
+  co2EvitadoTotal: number;
+  razonRanking: string;
+  modelosRecomendados: ModeloEV[];
+}
+
+export interface DiagnosticoFlota {
+  tipos: DiagnosticoTipo[];
+  ahorroMensualAgregado: number;
+  ahorroA5AniosAgregado: number;
+  co2EvitadoAnualAgregado: number;
+  inversionNetaAgregada: number;
+}
+
+export interface SeleccionTipo {
+  tipoId: string;
+  cantidadRecambio: number;
+  ofertas: { ofertaId: string; unidades: number }[];
+}
+
+export interface DatosSitio {
+  estacionamientos: number;
+  potenciaConectada: number;
+  distAcometida: number;
+  distInterna: number;
+  canalizacion: 'sobrepuesta' | 'soterrada';
+  empalme: 'ampliacion' | 'dedicado';
+  quiereCargaRapida: boolean;
+}
+
+export interface PlanTipo {
+  tipoId: string;
+  cargadoresAC: number;
+  usaDC: boolean;
+  explicacion: string;
+}
+
+export interface PlanInfraestructura {
+  cargadoresACTotales: number;
+  cargadoresDCTotales: number;
+  costoAC: number;
+  costoDC: number;
+  costoTotal: number;
+  distribucionPorTipo: PlanTipo[];
+  advertenciaSinDCPeroIntensivo: boolean;
+  mensajeDCSinNecesidad: boolean;
+}
+
+export interface Banco {
+  id: string;
+  nombre: string;
+  linea: string;
+  tasaMensual: number;
+  plazoMaxMeses: number;
+  casilla: string;
+}

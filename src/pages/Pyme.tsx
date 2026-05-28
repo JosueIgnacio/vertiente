@@ -9,6 +9,7 @@ import {
   TrendingDown,
   Shield,
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/layout/Navbar';
 import Footer from '../components/layout/Footer';
 import Container from '../components/layout/Container';
@@ -66,6 +67,7 @@ const FAQS = [
 ];
 
 export default function Pyme() {
+  const navigate = useNavigate();
   return (
     <div className="flex flex-col min-h-screen bg-white">
       <Navbar />
@@ -117,6 +119,7 @@ export default function Pyme() {
                 </div>
                 <button
                   type="button"
+                  onClick={() => navigate('/diagnostico-pyme')}
                   className="bg-[#FACC15] text-[#0F3D2E] font-semibold px-8 py-4 rounded-xl flex items-center gap-2 hover:bg-yellow-300 transition-colors cursor-pointer text-sm"
                 >
                   Solicitar diagnóstico pyme
@@ -209,6 +212,7 @@ export default function Pyme() {
                 </div>
                 <button
                   type="button"
+                  onClick={() => navigate('/diagnostico-pyme')}
                   className="w-full bg-[#16A34A] text-white font-semibold px-6 py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-[#15803D] transition-colors cursor-pointer text-sm"
                 >
                   Solicitar ahora
@@ -250,12 +254,13 @@ export default function Pyme() {
               <div className="flex flex-col sm:flex-row gap-3 justify-center">
                 <button
                   type="button"
+                  onClick={() => navigate('/diagnostico-pyme')}
                   className="bg-[#0F3D2E] text-white font-semibold px-8 py-4 rounded-xl flex items-center justify-center gap-2 hover:bg-[#0a2d22] transition-colors cursor-pointer"
                 >
                   Solicitar diagnóstico pyme
                   <ArrowRight className="w-4 h-4" />
                 </button>
-                <Button variant="outline" size="lg">
+                <Button variant="outline" size="lg" onClick={() => navigate('/simulador')}>
                   Primero quiero simular
                 </Button>
               </div>
