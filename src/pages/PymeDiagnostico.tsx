@@ -2536,17 +2536,25 @@ export default function PymeDiagnostico() {
 
       <main className="flex-1 py-10">
         <Container narrow>
-          {/* Breadcrumb */}
-          <div className="flex items-center gap-2 text-xs text-[#9CA3AF] mb-6">
-            <span>Empresas</span>
-            <span>›</span>
-            <span className="text-[#374151] font-medium">Diagnóstico de flota</span>
-            {state.paso > 1 && (
-              <>
-                <span>›</span>
-                <span className="text-[#374151]">{state.empresa.nombre}</span>
-              </>
-            )}
+          {/* Breadcrumb + badge pyme */}
+          <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
+            <div className="flex items-center gap-2 text-xs text-[#9CA3AF]">
+              <span>Empresas</span>
+              <span>›</span>
+              <span className="text-[#374151] font-medium">Diagnóstico de flota</span>
+              {state.paso > 1 && state.empresa.nombre && (
+                <>
+                  <span>›</span>
+                  <span className="text-[#374151] truncate max-w-[140px] sm:max-w-none">
+                    {state.empresa.nombre}
+                  </span>
+                </>
+              )}
+            </div>
+            <span className="inline-flex items-center gap-1.5 bg-[#FACC15] text-[#78350F] text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider shrink-0">
+              <Building2 className="w-3 h-3" />
+              Diagnóstico pyme
+            </span>
           </div>
 
           {/* Stepper */}
@@ -2577,7 +2585,7 @@ export default function PymeDiagnostico() {
                 Volver
               </Button>
 
-              {state.paso < 9 && (
+              {state.paso < 9 ? (
                 <Button
                   type="button"
                   onClick={pasoSiguiente}
@@ -2585,6 +2593,16 @@ export default function PymeDiagnostico() {
                 >
                   Continuar
                   <ArrowRight className="w-4 h-4" />
+                </Button>
+              ) : (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => navigate('/pyme')}
+                  className="flex items-center gap-2"
+                >
+                  <CheckCircle2 className="w-4 h-4 text-[#16A34A]" />
+                  Finalizar
                 </Button>
               )}
             </div>
