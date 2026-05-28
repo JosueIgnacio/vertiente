@@ -21,6 +21,7 @@ import {
   Phone,
   Mail,
   Download,
+  FlaskConical,
 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import jsPDF from 'jspdf';
@@ -215,6 +216,46 @@ const RUBROS = [
   'Alimentación',
   'Salud',
   'Otro',
+];
+
+// ── Datos demo para modo admin ────────────────────────────────────────────────
+
+const ADMIN_DEMO_FLOTA: TipoVehiculo[] = [
+  {
+    id: 'admin-pickup-1',
+    etiqueta: 'Camionetas de reparto',
+    carroceria: 'pickup',
+    cantidad: 5,
+    antiguedadAnios: 7,
+    kmDia: 130,
+    horasOperacion: 8,
+    rendimientoKmL: 10,
+    mantencionAnual: 900_000,
+  },
+  {
+    id: 'admin-furgon-1',
+    etiqueta: 'Furgones logística',
+    carroceria: 'furgon',
+    cantidad: 3,
+    antiguedadAnios: 4,
+    kmDia: 80,
+    horasOperacion: 9,
+    rendimientoKmL: 9,
+    mantencionAnual: 650_000,
+  },
+];
+
+const ADMIN_DEMO_SELECCION: SeleccionTipo[] = [
+  {
+    tipoId: 'admin-pickup-1',
+    cantidadRecambio: 3,
+    ofertas: [{ ofertaId: 'verde-t90', unidades: 3 }],
+  },
+  {
+    tipoId: 'admin-furgon-1',
+    cantidadRecambio: 2,
+    ofertas: [{ ofertaId: 'verde-edelivery', unidades: 2 }],
+  },
 ];
 
 // ── Modal de pago simulado ────────────────────────────────────────────────────
@@ -2354,6 +2395,30 @@ export default function PymeDiagnostico() {
   const navigate = useNavigate();
   const [state, setState] = useState<PymeState>(INITIAL_STATE);
   const [showModalPago, setShowModalPago] = useState(false);
+  const [adminMode, setAdminMode] = useState(false);
+
+  const toggleAdmin = () => {
+    if (!adminMode) {
+      // Al activar: pre-poblar con datos demo para poder navegar libremente
+      const analisis = analizarFlota(ADMIN_DEMO_FLOTA);
+      const plan = dimensionarInfraestructura(
+        ADMIN_DEMO_SELECCION,
+        ADMIN_DEMO_FLOTA,
+        DEFAULT_SITIO,
+      );
+      setState({
+        paso: state.paso,
+        empresa: { nombre: 'Demo Transportes Ltda.', rubro: 'Transporte', tamano: '6-20' },
+        contacto: { nombre: 'Admin Demo', correo: 'admin@demo.cl', telefono: '+56 9 0000 0000' },
+        flota: ADMIN_DEMO_FLOTA,
+        seleccion: ADMIN_DEMO_SELECCION,
+        sitio: DEFAULT_SITIO,
+        analisisFlota: analisis,
+        planInfraestructura: plan,
+      });
+    }
+    setAdminMode((prev) => !prev);
+  };
 
   // Scroll al tope al cambiar de paso
   useEffect(() => {
@@ -2427,6 +2492,7 @@ export default function PymeDiagnostico() {
 
   // Validación del botón "Continuar" por paso
   const puedeAvanzar = (): boolean => {
+    if (adminMode) return true; // Admin: sin restricciones
     switch (state.paso) {
       case 1: return false; // Paso 1 usa el modal de pago, no el botón de navegación
       case 2: return state.flota.length >= 1;
@@ -2618,6 +2684,55 @@ export default function PymeDiagnostico() {
           onConfirm={handlePagoConfirmado}
           onClose={() => setShowModalPago(false)}
         />
+      )}
+
+      {/* ── Admin nav ─────────────────────────────────────────────────────────
+           Trigger: pequeño botón oculto al final de la página.
+           Panel: barra flotante visible solo cuando adminMode está activo.
+      ──────────────────────────────────────────────────────────────────────── */}
+
+      {/* Trigger oculto */}
+      <button
+        type="button"
+        onClick={toggleAdmin}
+        title={adminMode ? 'Desactivar modo admin' : 'Activar modo admin'}
+        className={`
+          fixed bottom-3 right-3 z-40 flex items-center gap-1.5 px-2.5 py-1.5 rounded-full
+          text-[10px] font-semibold border transition-all duration-200 cursor-pointer
+          ${adminMode
+            ? 'bg-orange-500 border-orange-600 text-white shadow-lg shadow-orange-200'
+            : 'bg-white border-[#E5E7EB] text-[#D1D5DB] hover:text-[#9CA3AF] hover:border-[#D1D5DB] opacity-30 hover:opacity-100'
+          }
+        `}
+      >
+        <FlaskConical className="w-3 h-3" />
+        {adminMode ? 'Admin ON' : 'admin'}
+      </button>
+
+      {/* Barra flotante de navegación rápida (solo cuando adminMode activo) */}
+      {adminMode && (
+        <div className="fixed bottom-12 left-1/2 -translate-x-1/2 z-40 flex items-center gap-2 bg-[#1C1917] border border-orange-500/40 rounded-2xl px-4 py-2.5 shadow-2xl shadow-black/40">
+          <span className="text-[10px] font-bold text-orange-400 uppercase tracking-widest mr-1 shrink-0">
+            Admin
+          </span>
+          <div className="w-px h-4 bg-orange-500/30 mx-1 shrink-0" />
+          {([1, 2, 3, 4, 5, 6, 7, 8, 9] as PymeState['paso'][]).map((n) => (
+            <button
+              key={n}
+              type="button"
+              onClick={() => set({ paso: n })}
+              className={`
+                w-7 h-7 rounded-lg text-xs font-bold transition-all duration-150 cursor-pointer shrink-0
+                ${state.paso === n
+                  ? 'bg-orange-500 text-white shadow-md'
+                  : 'bg-white/10 text-white/60 hover:bg-white/20 hover:text-white'
+                }
+              `}
+            >
+              {n}
+            </button>
+          ))}
+        </div>
       )}
     </div>
   );
