@@ -18,7 +18,12 @@ import {
   Leaf,
   Car,
   AlertTriangle,
+  Phone,
+  Mail,
+  Download,
 } from 'lucide-react';
+import { QRCodeSVG } from 'qrcode.react';
+import jsPDF from 'jspdf';
 import Navbar from '../components/layout/Navbar';
 import Footer from '../components/layout/Footer';
 import Container from '../components/layout/Container';
@@ -34,6 +39,7 @@ import { MODELOS } from '../data/modelos';
 import { OFERTAS } from '../data/ofertas';
 import { PROVEEDORES } from '../data/proveedores';
 import { SEGMENTOS } from '../data/segmentos';
+import { BANCOS } from '../data/bancos';
 import type {
   TipoVehiculo,
   SeleccionTipo,
@@ -795,20 +801,6 @@ function Paso2({
   );
 }
 
-// ── Stubs para pasos 3–9 ──────────────────────────────────────────────────────
-
-function PasoEnConstruccion({ paso }: { paso: number }) {
-  return (
-    <Card padding="lg" className="text-center py-16">
-      <div className="w-16 h-16 rounded-2xl bg-[#DCFCE7] flex items-center justify-center mx-auto mb-4">
-        <Building2 className="w-8 h-8 text-[#15803D]" />
-      </div>
-      <h2 className="text-xl font-bold text-[#0F3D2E] mb-2">Paso {paso}</h2>
-      <p className="text-sm text-[#6B7280]">Este paso se implementa en las próximas etapas.</p>
-    </Card>
-  );
-}
-
 // ── Paso 3: Dashboard diagnóstico ────────────────────────────────────────────
 
 const CARROCERIA_LABEL_ES: Record<string, string> = {
@@ -1507,6 +1499,841 @@ function Paso6({
   );
 }
 
+// ── Helpers pasos 7-9 ─────────────────────────────────────────────────────────
+
+/**
+ * Codifica cualquier objeto en Base64URL para el QR.
+ * Usa encodeURIComponent antes de btoa para soportar caracteres fuera de Latin-1.
+ */
+function encodePayloadPyme(data: unknown): string {
+  return btoa(encodeURIComponent(JSON.stringify(data)))
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=/g, '');
+}
+
+function generateFolioPyme(prefix = 'PYM'): string {
+  const fecha = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+  const rand = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+  return `${prefix}-${fecha}-${rand}`;
+}
+
+function calcularResumenProyecto(
+  seleccion: SeleccionTipo[],
+  flota: TipoVehiculo[],
+  analisisFlota: DiagnosticoFlota,
+  plan: PlanInfraestructura,
+) {
+  const tiposActivos = seleccion.filter((s) => s.cantidadRecambio > 0);
+  let totalVehiculos = 0;
+  let costoVehiculos = 0;
+  let reventaTotal = 0;
+  let ahorroMensual = 0;
+  let co2EvitadoAnual = 0;
+
+  for (const sel of tiposActivos) {
+    const diagTipo = analisisFlota.tipos.find((dt) => dt.tipo.id === sel.tipoId);
+    if (!diagTipo) continue;
+    totalVehiculos += sel.cantidadRecambio;
+    reventaTotal += diagTipo.reventaPorVehiculo * sel.cantidadRecambio;
+    ahorroMensual += diagTipo.ahorroMensualPorVehiculo * sel.cantidadRecambio;
+    co2EvitadoAnual += diagTipo.co2EvitadoPorVehiculo * sel.cantidadRecambio;
+    costoVehiculos += sel.ofertas.reduce((sum, o) => {
+      const of = OFERTAS.find((x) => x.id === o.ofertaId);
+      return sum + (of ? of.precio * o.unidades : 0);
+    }, 0);
+  }
+
+  const costoInstalacion = plan.costoTotal;
+  const inversionNetaTotal = costoVehiculos - reventaTotal + costoInstalacion;
+
+  // Series TCO solo del subconjunto elegido
+  const flotaElegida: TipoVehiculo[] = tiposActivos
+    .map((sel) => {
+      const tipo = flota.find((t) => t.id === sel.tipoId);
+      return tipo ? { ...tipo, cantidad: sel.cantidadRecambio } : null;
+    })
+    .filter((t): t is TipoVehiculo => t !== null);
+
+  const { serieCombustion, serieElectrico } = generarSeriesFlota(flotaElegida, inversionNetaTotal);
+
+  return {
+    totalVehiculos,
+    costoVehiculos,
+    reventaTotal,
+    costoInstalacion,
+    inversionNetaTotal,
+    ahorroMensual,
+    ahorro5Anios: ahorroMensual * 60,
+    co2EvitadoAnual,
+    co2Evitado5Anios: co2EvitadoAnual * 5,
+    serieCombustion,
+    serieElectrico,
+  };
+}
+
+function generarInformePDF(
+  empresa: PymeState['empresa'],
+  contacto: PymeState['contacto'],
+  resumen: ReturnType<typeof calcularResumenProyecto>,
+  analisisFlota: DiagnosticoFlota,
+  seleccion: SeleccionTipo[],
+  flota: TipoVehiculo[],
+  plan: PlanInfraestructura,
+  folio: string,
+) {
+  const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+  const W = 210;
+  const fecha = new Date().toLocaleDateString('es-CL', {
+    day: '2-digit', month: '2-digit', year: 'numeric',
+  });
+
+  // ── Portada ────────────────────────────────────────────────────────────────
+  doc.setFillColor(15, 61, 46);
+  doc.rect(0, 0, W, 40, 'F');
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(22);
+  doc.setFont('helvetica', 'bold');
+  doc.text('evmarket', 16, 16);
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'normal');
+  doc.text('Informe de Diagnóstico de Electromovilidad — Pyme', 16, 28);
+  doc.setFontSize(8.5);
+  doc.text(`Folio: ${folio}`, W - 16, 14, { align: 'right' });
+  doc.text(`Fecha: ${fecha}`, W - 16, 22, { align: 'right' });
+
+  let y = 52;
+
+  // ── Datos empresa ─────────────────────────────────────────────────────────
+  doc.setTextColor(15, 61, 46);
+  doc.setFontSize(13);
+  doc.setFont('helvetica', 'bold');
+  doc.text(empresa.nombre || 'Empresa sin nombre', 16, y);
+  y += 6;
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(80, 80, 80);
+  doc.text(`Rubro: ${empresa.rubro}  ·  Tamaño: ${empresa.tamano} vehículos`, 16, y);
+  y += 5;
+  if (contacto.nombre) {
+    doc.text(
+      `Contacto: ${contacto.nombre}${contacto.correo ? '  ·  ' + contacto.correo : ''}`,
+      16, y,
+    );
+    y += 5;
+  }
+  y += 4;
+  doc.setDrawColor(220, 220, 220);
+  doc.line(16, y, W - 16, y);
+  y += 8;
+
+  // ── Sección 1: Resumen ejecutivo ──────────────────────────────────────────
+  const addSectionTitle = (title: string) => {
+    if (y > 255) { doc.addPage(); y = 20; }
+    doc.setTextColor(15, 61, 46);
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.text(title, 16, y);
+    y += 7;
+  };
+
+  addSectionTitle('1. Resumen ejecutivo del proyecto');
+
+  const statRows = [
+    ['Vehículos a electrificar', `${resumen.totalVehiculos}`],
+    ['Costo de vehículos elegidos', formatCLPMillon(resumen.costoVehiculos)],
+    ['Costo estimado de instalación', formatCLPMillon(resumen.costoInstalacion)],
+    ['Inversión neta total (descontando reventa)', formatCLPMillon(resumen.inversionNetaTotal)],
+    ['Ahorro mensual estimado del proyecto', formatCLP(resumen.ahorroMensual)],
+    ['Ahorro a 5 años', formatCLPMillon(resumen.ahorro5Anios)],
+    ['CO₂ evitado anual', `${(resumen.co2EvitadoAnual / 1000).toFixed(1)} ton/año`],
+  ];
+
+  doc.setFontSize(9);
+  statRows.forEach(([label, value]) => {
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(80, 80, 80);
+    doc.text(label, 18, y);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(15, 61, 46);
+    doc.text(value, W - 18, y, { align: 'right' });
+    y += 6;
+  });
+
+  y += 4;
+  doc.setDrawColor(220, 220, 220);
+  doc.line(16, y, W - 16, y);
+  y += 8;
+
+  // ── Sección 2: Priorización ───────────────────────────────────────────────
+  addSectionTitle('2. Priorización de la flota (por payback ajustado)');
+
+  doc.setFillColor(240, 253, 244);
+  doc.rect(16, y - 1, W - 32, 7, 'F');
+  doc.setFontSize(8);
+  doc.setTextColor(30, 30, 30);
+  doc.setFont('helvetica', 'bold');
+  doc.text('Tipo', 18, y + 4);
+  doc.text('Cant.', 80, y + 4);
+  doc.text('Payback', 100, y + 4);
+  doc.text('Ahorro/mes', 130, y + 4);
+  doc.text('CO₂/año', W - 20, y + 4, { align: 'right' });
+  y += 8;
+
+  doc.setFont('helvetica', 'normal');
+  analisisFlota.tipos.forEach((dt) => {
+    if (y > 265) { doc.addPage(); y = 20; }
+    const etiqueta = (dt.tipo.etiqueta || CARROCERIA_LABEL_ES[dt.tipo.carroceria] || dt.tipo.carroceria).substring(0, 28);
+    doc.setTextColor(30, 30, 30);
+    doc.text(etiqueta, 18, y);
+    doc.text(dt.tipo.cantidad.toString(), 80, y);
+    doc.text(`${dt.paybackAjustado.toFixed(1)} años`, 100, y);
+    doc.text(formatCLP(dt.ahorroMensualPorVehiculo), 130, y);
+    doc.text(`${(dt.co2EvitadoPorVehiculo / 1000).toFixed(1)} ton`, W - 20, y, { align: 'right' });
+    y += 6;
+    doc.setDrawColor(235, 235, 235);
+    doc.line(16, y - 1, W - 16, y - 1);
+  });
+
+  y += 6;
+  doc.setDrawColor(220, 220, 220);
+  doc.line(16, y, W - 16, y);
+  y += 8;
+
+  // ── Sección 3: Vehículos del proyecto ─────────────────────────────────────
+  addSectionTitle('3. Vehículos seleccionados para el proyecto');
+
+  const tiposActivos = seleccion.filter((s) => s.cantidadRecambio > 0);
+  if (tiposActivos.length === 0) {
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'italic');
+    doc.setTextColor(130, 130, 130);
+    doc.text('Sin vehículos seleccionados.', 18, y);
+    y += 8;
+  } else {
+    doc.setFillColor(240, 253, 244);
+    doc.rect(16, y - 1, W - 32, 7, 'F');
+    doc.setFontSize(8);
+    doc.setTextColor(30, 30, 30);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Tipo', 18, y + 4);
+    doc.text('Recambio', 70, y + 4);
+    doc.text('Modelo elegido', 100, y + 4);
+    doc.text('Subtotal', W - 20, y + 4, { align: 'right' });
+    y += 8;
+
+    doc.setFont('helvetica', 'normal');
+    tiposActivos.forEach((sel) => {
+      if (y > 265) { doc.addPage(); y = 20; }
+      const tipo = flota.find((t) => t.id === sel.tipoId);
+      const etiqueta = (tipo?.etiqueta || sel.tipoId).substring(0, 22);
+      doc.setTextColor(30, 30, 30);
+      if (sel.ofertas.length === 0) {
+        doc.text(etiqueta, 18, y);
+        doc.text(sel.cantidadRecambio.toString(), 70, y);
+        doc.text('—', 100, y);
+        doc.text('—', W - 20, y, { align: 'right' });
+        y += 6;
+      } else {
+        sel.ofertas.forEach((o, idx) => {
+          const of = OFERTAS.find((x) => x.id === o.ofertaId);
+          const modelo = of ? MODELOS.find((m) => m.id === of.modeloId) : null;
+          const nombre = modelo ? `${o.unidades}× ${modelo.marca} ${modelo.modelo}` : '—';
+          const subtotal = of ? formatCLPMillon(of.precio * o.unidades) : '—';
+          if (idx === 0) {
+            doc.text(etiqueta, 18, y);
+            doc.text(sel.cantidadRecambio.toString(), 70, y);
+          }
+          doc.text(nombre.substring(0, 30), 100, y);
+          doc.text(subtotal, W - 20, y, { align: 'right' });
+          y += 5;
+        });
+      }
+      doc.setDrawColor(235, 235, 235);
+      doc.line(16, y - 1, W - 16, y - 1);
+    });
+  }
+
+  y += 6;
+  doc.setDrawColor(220, 220, 220);
+  doc.line(16, y, W - 16, y);
+  y += 8;
+
+  // ── Sección 4: Plan de infraestructura ────────────────────────────────────
+  addSectionTitle('4. Plan de infraestructura de carga');
+
+  const infraRows: [string, string][] = [
+    ['Cargadores AC totales', plan.cargadoresACTotales.toString()],
+    ...(plan.cargadoresDCTotales > 0 ? [['Cargadores DC totales', plan.cargadoresDCTotales.toString()] as [string, string]] : []),
+    ['Costo estimado instalación AC', formatCLPMillon(plan.costoAC)],
+    ...(plan.cargadoresDCTotales > 0 ? [['Costo estimado instalación DC', formatCLPMillon(plan.costoDC)] as [string, string]] : []),
+    ['Costo total de infraestructura', formatCLPMillon(plan.costoTotal)],
+  ];
+
+  doc.setFontSize(9);
+  infraRows.forEach(([label, value]) => {
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(80, 80, 80);
+    doc.text(label, 18, y);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(15, 61, 46);
+    doc.text(value, W - 18, y, { align: 'right' });
+    y += 6;
+  });
+
+  y += 4;
+  doc.setDrawColor(220, 220, 220);
+  doc.line(16, y, W - 16, y);
+  y += 8;
+
+  // ── Sección 5: Conclusiones ────────────────────────────────────────────────
+  addSectionTitle('5. Conclusiones');
+
+  const texto = `Este informe presenta una estimación del potencial de electromovilidad para la flota de ${empresa.nombre || 'la empresa'}. Los cálculos utilizan precios de referencia vigentes al momento de la simulación y supuestos estándar de consumo y carga. El payback ajustado incorpora el valor de reventa del vehículo actual y un bono por antigüedad del parque vehicular. La inversión neta considera el precio del EV elegido menos la reventa estimada, más los costos de infraestructura de carga. Los valores son referenciales y no constituyen una cotización formal.`;
+  doc.setFontSize(8.5);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(60, 60, 60);
+  const lines = doc.splitTextToSize(texto, W - 32);
+  if (y + lines.length * 5 > 270) { doc.addPage(); y = 20; }
+  doc.text(lines, 16, y);
+  y += lines.length * 5 + 8;
+
+  if (y > 265) { doc.addPage(); y = 20; }
+  doc.setFontSize(7.5);
+  doc.setFont('helvetica', 'italic');
+  doc.setTextColor(150, 150, 150);
+  const disclaimer = 'Informe referencial. No constituye cotización, contrato ni asesoría financiera formal. Los precios, tasas y condiciones están sujetos a variación. evmarket no garantiza resultados específicos. Consulta con un especialista antes de tomar decisiones de inversión.';
+  const dLines = doc.splitTextToSize(disclaimer, W - 32);
+  doc.text(dLines, 16, y);
+
+  doc.save(`informe-electromovilidad-${(empresa.nombre || 'empresa').toLowerCase().replace(/\s+/g, '-')}.pdf`);
+}
+
+// ── Paso 7: Dashboard consolidado ────────────────────────────────────────────
+
+function Paso7({
+  seleccion,
+  flota,
+  analisisFlota,
+  planInfraestructura,
+  empresa,
+  contacto,
+}: {
+  seleccion: SeleccionTipo[];
+  flota: TipoVehiculo[];
+  analisisFlota: DiagnosticoFlota;
+  planInfraestructura: PlanInfraestructura;
+  empresa: PymeState['empresa'];
+  contacto: PymeState['contacto'];
+}) {
+  const [folio] = useState(() => generateFolioPyme());
+
+  const resumen = useMemo(
+    () => calcularResumenProyecto(seleccion, flota, analisisFlota, planInfraestructura),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
+
+  const tiposActivos = seleccion.filter((s) => s.cantidadRecambio > 0);
+
+  return (
+    <div className="flex flex-col gap-7">
+      <div>
+        <h2 className="text-xl font-bold text-[#0F3D2E] mb-1">Dashboard del proyecto</h2>
+        <p className="text-sm text-[#6B7280]">
+          Resumen del proyecto de electrificación que elegiste configurar.
+        </p>
+      </div>
+
+      {/* StatCards resumen */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+        <StatCard
+          label="Vehículos a electrificar"
+          value={resumen.totalVehiculos.toString()}
+          accent
+        />
+        <StatCard
+          label="Costo total del proyecto"
+          value={formatCLPMillon(resumen.costoVehiculos + resumen.costoInstalacion)}
+        />
+        <StatCard
+          label="Ahorro mensual estimado"
+          value={formatCLP(resumen.ahorroMensual)}
+        />
+        <StatCard
+          label="Ahorro a 5 años"
+          value={formatCLPMillon(resumen.ahorro5Anios)}
+        />
+        <StatCard
+          label="CO₂ evitado anual"
+          value={`${(resumen.co2EvitadoAnual / 1000).toFixed(1)} ton`}
+        />
+        <StatCard
+          label="CO₂ evitado a 5 años"
+          value={`${(resumen.co2Evitado5Anios / 1000).toFixed(1)} ton`}
+        />
+      </div>
+
+      {/* Gráfico TCO del proyecto */}
+      <Card padding="lg">
+        <h3 className="text-sm font-semibold text-[#374151] mb-4">Evolución TCO del proyecto elegido</h3>
+        <TCOChart
+          serieCombustion={resumen.serieCombustion}
+          serieElectrico={resumen.serieElectrico}
+          inversionTotal={resumen.inversionNetaTotal}
+        />
+        <p className="text-[10px] text-[#9CA3AF] mt-3">
+          Inversión neta = costo vehículos − reventa estimada + costo instalación. La curva eléctrica
+          parte en la inversión neta y se amortiza con el ahorro operacional mensual acumulado.
+        </p>
+      </Card>
+
+      {/* Tabla de detalle por tipo */}
+      <Card padding="lg">
+        <h3 className="text-sm font-semibold text-[#374151] mb-4">Detalle por tipo de vehículo</h3>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm min-w-[520px]">
+            <thead>
+              <tr>
+                <th className="text-left text-xs font-semibold text-[#374151] bg-[#F9FAFB] px-3 py-2 rounded-l-lg">
+                  Tipo
+                </th>
+                <th className="text-center text-xs font-semibold text-[#374151] bg-[#F9FAFB] px-3 py-2">
+                  Recambio
+                </th>
+                <th className="text-left text-xs font-semibold text-[#374151] bg-[#F9FAFB] px-3 py-2">
+                  Oferta elegida
+                </th>
+                <th className="text-center text-xs font-semibold text-[#374151] bg-[#F9FAFB] px-3 py-2">
+                  Carg. AC
+                </th>
+                <th className="text-right text-xs font-semibold text-[#374151] bg-[#F9FAFB] px-3 py-2 rounded-r-lg">
+                  Subtotal
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[#F3F4F6]">
+              {tiposActivos.map((sel) => {
+                const tipo = flota.find((t) => t.id === sel.tipoId);
+                const planTipo = planInfraestructura.distribucionPorTipo.find(
+                  (p) => p.tipoId === sel.tipoId,
+                );
+                const costoLinea = sel.ofertas.reduce((sum, o) => {
+                  const of = OFERTAS.find((x) => x.id === o.ofertaId);
+                  return sum + (of ? of.precio * o.unidades : 0);
+                }, 0);
+                const ofertasDesc = sel.ofertas
+                  .map((o) => {
+                    const of = OFERTAS.find((x) => x.id === o.ofertaId);
+                    const m = of ? MODELOS.find((mod) => mod.id === of.modeloId) : null;
+                    return m ? `${o.unidades}× ${m.marca} ${m.modelo}` : null;
+                  })
+                  .filter(Boolean)
+                  .join(', ');
+
+                return (
+                  <tr key={sel.tipoId}>
+                    <td className="px-3 py-2.5 font-medium text-[#111827]">
+                      {tipo?.etiqueta ||
+                        CARROCERIA_LABEL_ES[tipo?.carroceria || ''] ||
+                        sel.tipoId}
+                    </td>
+                    <td className="px-3 py-2.5 text-center text-[#374151]">
+                      {sel.cantidadRecambio}
+                    </td>
+                    <td className="px-3 py-2.5 text-[#374151] text-xs">
+                      {ofertasDesc || (
+                        <span className="text-[#9CA3AF] italic">Sin oferta asignada</span>
+                      )}
+                    </td>
+                    <td className="px-3 py-2.5 text-center text-[#374151]">
+                      {planTipo?.cargadoresAC ?? '—'}
+                    </td>
+                    <td className="px-3 py-2.5 text-right font-semibold text-[#0F3D2E]">
+                      {costoLinea > 0 ? formatCLPMillon(costoLinea) : '—'}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+            <tfoot>
+              <tr className="border-t-2 border-[#E5E7EB]">
+                <td
+                  colSpan={4}
+                  className="px-3 py-2.5 text-right font-semibold text-[#374151] text-xs"
+                >
+                  Total vehículos + instalación:
+                </td>
+                <td className="px-3 py-2.5 text-right font-bold text-[#0F3D2E]">
+                  {formatCLPMillon(resumen.costoVehiculos + resumen.costoInstalacion)}
+                </td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </Card>
+
+      {/* Botón descargar PDF */}
+      <button
+        type="button"
+        onClick={() =>
+          generarInformePDF(
+            empresa, contacto, resumen, analisisFlota,
+            seleccion, flota, planInfraestructura, folio,
+          )
+        }
+        className="flex items-center justify-center gap-2.5 w-full bg-[#0F3D2E] hover:bg-[#16A34A] text-white font-semibold py-4 rounded-2xl transition-colors shadow-sm text-sm cursor-pointer"
+      >
+        <Download className="w-4 h-4" />
+        Descargar informe completo (PDF)
+      </button>
+    </div>
+  );
+}
+
+// ── Paso 8: Contacto con bancos ───────────────────────────────────────────────
+
+function Paso8({
+  empresa,
+  contacto,
+  seleccion,
+  flota,
+  planInfraestructura,
+}: {
+  empresa: PymeState['empresa'];
+  contacto: PymeState['contacto'];
+  seleccion: SeleccionTipo[];
+  flota: TipoVehiculo[];
+  planInfraestructura: PlanInfraestructura;
+}) {
+  const [folios] = useState<Record<string, string>>(() => {
+    const f: Record<string, string> = {};
+    BANCOS.forEach((b) => { f[b.id] = generateFolioPyme(); });
+    return f;
+  });
+
+  const fecha = new Date().toLocaleDateString('es-CL', {
+    day: '2-digit', month: '2-digit', year: 'numeric',
+  });
+
+  // Construir lineas del proyecto para el payload
+  const lineasProyecto: { descripcion: string; cantidad: number; monto?: number }[] = [];
+  let montoProyecto = 0;
+  let totalVehiculos = 0;
+
+  seleccion
+    .filter((s) => s.cantidadRecambio > 0)
+    .forEach((sel) => {
+      const tipo = flota.find((t) => t.id === sel.tipoId);
+      totalVehiculos += sel.cantidadRecambio;
+      sel.ofertas.forEach((o) => {
+        const of = OFERTAS.find((x) => x.id === o.ofertaId);
+        const modelo = of ? MODELOS.find((m) => m.id === of.modeloId) : null;
+        if (of && modelo) {
+          const monto = of.precio * o.unidades;
+          montoProyecto += monto;
+          lineasProyecto.push({
+            descripcion: `${o.unidades}× ${modelo.marca} ${modelo.modelo}${tipo ? ` (${tipo.etiqueta || tipo.carroceria})` : ''}`,
+            cantidad: o.unidades,
+            monto,
+          });
+        }
+      });
+    });
+
+  montoProyecto += planInfraestructura.costoTotal;
+  if (planInfraestructura.costoTotal > 0) {
+    lineasProyecto.push({
+      descripcion: `Infraestructura de carga (${planInfraestructura.cargadoresACTotales} carg. AC${planInfraestructura.cargadoresDCTotales > 0 ? ` + ${planInfraestructura.cargadoresDCTotales} DC` : ''})`,
+      cantidad: 1,
+      monto: planInfraestructura.costoTotal,
+    });
+  }
+
+  return (
+    <div className="flex flex-col gap-6">
+      <div>
+        <h2 className="text-xl font-bold text-[#0F3D2E] mb-1">Financiamiento con bancos</h2>
+        <p className="text-sm text-[#6B7280]">
+          Escanea el QR de cada banco para generar un comprobante de interés. El banco recibirá los
+          datos de tu proyecto para cotizarte condiciones de financiamiento verde.
+        </p>
+        <p className="text-[10px] text-[#9CA3AF] mt-1 italic">
+          Los QR funcionan desde la versión publicada en Vercel.
+        </p>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {BANCOS.map((banco) => {
+          const folio = folios[banco.id];
+          const payload = {
+            folio,
+            fecha,
+            empresa: empresa.nombre,
+            contactoNombre: contacto.nombre,
+            contactoEmail: contacto.correo,
+            tipo: 'banco' as const,
+            entidad: { nombre: banco.nombre, linea: banco.linea, casilla: banco.casilla },
+            montoProyecto,
+            totalVehiculos,
+            lineas: lineasProyecto,
+          };
+          // Este QR apunta a la URL pública de la app. Para demostrarlo, escanear desde la versión en Vercel, no desde localhost.
+          const qrUrl = `${window.location.origin}/comprobante?d=${encodePayloadPyme(payload)}`;
+
+          return (
+            <Card
+              key={banco.id}
+              padding="lg"
+              className="hover:shadow-md transition-shadow flex flex-col gap-4"
+            >
+              {/* Logo + nombre */}
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-[#0F3D2E] flex items-center justify-center shrink-0">
+                  <span className="text-white text-xs font-bold">
+                    {banco.nombre.slice(0, 2).toUpperCase()}
+                  </span>
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-[#111827]">{banco.nombre}</p>
+                  <p className="text-xs text-[#6B7280]">{banco.linea}</p>
+                </div>
+              </div>
+
+              {/* Detalles */}
+              <div className="flex flex-col gap-1.5 text-xs text-[#374151]">
+                <div className="flex items-center justify-between">
+                  <span className="text-[#6B7280]">Tasa mensual ref.</span>
+                  <span className="font-semibold">{(banco.tasaMensual * 100).toFixed(2)}%</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-[#6B7280]">Plazo máximo</span>
+                  <span className="font-semibold">{banco.plazoMaxMeses} meses</span>
+                </div>
+              </div>
+
+              {/* QR centrado */}
+              <div className="bg-[#F0FDF4] rounded-2xl p-3 flex flex-col items-center gap-2">
+                <QRCodeSVG value={qrUrl} size={112} />
+                <p className="text-[10px] text-[#6B7280] text-center leading-tight">
+                  Escanea para generar comprobante de interés
+                </p>
+              </div>
+
+              <p className="text-[10px] text-[#9CA3AF] font-mono text-center">Folio: {folio}</p>
+
+              {/* Disclaimer obligatorio */}
+              <p className="text-[10px] text-amber-600 bg-amber-50 border border-amber-100 rounded-xl px-3 py-2 leading-relaxed">
+                Tasa referencial, sujeta a evaluación del banco y variable según campaña vigente.
+              </p>
+            </Card>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ── Paso 9: Contacto con proveedores ─────────────────────────────────────────
+
+function Paso9({
+  empresa,
+  contacto,
+  seleccion,
+}: {
+  empresa: PymeState['empresa'];
+  contacto: PymeState['contacto'];
+  seleccion: SeleccionTipo[];
+}) {
+  const [folios] = useState<Record<string, string>>(() => {
+    const f: Record<string, string> = {};
+    PROVEEDORES.forEach((p) => { f[p.id] = generateFolioPyme(); });
+    return f;
+  });
+
+  const fecha = new Date().toLocaleDateString('es-CL', {
+    day: '2-digit', month: '2-digit', year: 'numeric',
+  });
+
+  // Agrupar ofertas elegidas por proveedor
+  const porProveedor: Record<
+    string,
+    { ofertaId: string; unidades: number; modeloId: string; precio: number }[]
+  > = {};
+
+  seleccion
+    .filter((s) => s.cantidadRecambio > 0)
+    .forEach((sel) => {
+      sel.ofertas.forEach((o) => {
+        if (o.unidades === 0) return;
+        const of = OFERTAS.find((x) => x.id === o.ofertaId);
+        if (!of) return;
+        if (!porProveedor[of.proveedorId]) porProveedor[of.proveedorId] = [];
+        porProveedor[of.proveedorId].push({
+          ofertaId: o.ofertaId,
+          unidades: o.unidades,
+          modeloId: of.modeloId,
+          precio: of.precio,
+        });
+      });
+    });
+
+  const proveedoresActivos = PROVEEDORES.filter((p) => (porProveedor[p.id]?.length ?? 0) > 0);
+
+  if (proveedoresActivos.length === 0) {
+    return (
+      <div className="flex flex-col gap-6">
+        <div>
+          <h2 className="text-xl font-bold text-[#0F3D2E] mb-1">Contacto con proveedores</h2>
+          <p className="text-sm text-[#6B7280]">
+            No hay ofertas asignadas en tu selección. Vuelve al{' '}
+            <button
+              type="button"
+              className="text-[#16A34A] underline cursor-pointer"
+              onClick={() => history.go(-5)}
+            >
+              Paso 4
+            </button>{' '}
+            para asignar modelos.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-6">
+      <div>
+        <h2 className="text-xl font-bold text-[#0F3D2E] mb-1">Contacto con proveedores</h2>
+        <p className="text-sm text-[#6B7280]">
+          Escanea el QR de cada proveedor para generar un comprobante de las unidades de interés.
+          El proveedor recibirá los detalles para cotizarte formalmente.
+        </p>
+        <p className="text-[10px] text-[#9CA3AF] mt-1 italic">
+          Los QR funcionan desde la versión publicada en Vercel.
+        </p>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {proveedoresActivos.map((proveedor) => {
+          const lineas = porProveedor[proveedor.id];
+          const folio = folios[proveedor.id];
+          const montoTotal = lineas.reduce((sum, l) => sum + l.precio * l.unidades, 0);
+
+          const productos = lineas.map((l) => {
+            const modelo = MODELOS.find((m) => m.id === l.modeloId);
+            return {
+              descripcion: modelo ? `${modelo.marca} ${modelo.modelo}` : l.modeloId,
+              cantidad: l.unidades,
+              monto: l.precio,
+            };
+          });
+
+          const payload = {
+            folio,
+            fecha,
+            empresa: empresa.nombre,
+            contactoNombre: contacto.nombre,
+            contactoEmail: contacto.correo,
+            tipo: 'proveedor' as const,
+            entidad: { nombre: proveedor.nombre, casilla: proveedor.leadCasilla },
+            montoProyecto: montoTotal,
+            lineas: productos,
+          };
+
+          // Este QR apunta a la URL pública de la app. Para demostrarlo, escanear desde la versión en Vercel, no desde localhost.
+          const qrUrl = `${window.location.origin}/comprobante?d=${encodePayloadPyme(payload)}`;
+
+          return (
+            <Card
+              key={proveedor.id}
+              padding="lg"
+              className="hover:shadow-md transition-shadow flex flex-col gap-4"
+            >
+              {/* Header proveedor */}
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-[#16A34A] flex items-center justify-center shrink-0">
+                  <span className="text-white text-xs font-bold">
+                    {proveedor.nombre.slice(0, 2).toUpperCase()}
+                  </span>
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-[#111827]">{proveedor.nombre}</p>
+                  <div className="flex flex-col gap-0.5 mt-0.5">
+                    <a
+                      href={`tel:${proveedor.telefono}`}
+                      className="flex items-center gap-1 text-xs text-[#374151] hover:text-[#16A34A] transition-colors"
+                    >
+                      <Phone className="w-3 h-3" />
+                      {proveedor.telefono}
+                    </a>
+                    <a
+                      href={`mailto:${proveedor.correo}`}
+                      className="flex items-center gap-1 text-xs text-[#374151] hover:text-[#16A34A] transition-colors"
+                    >
+                      <Mail className="w-3 h-3" />
+                      {proveedor.correo}
+                    </a>
+                  </div>
+                </div>
+              </div>
+
+              {/* Modelos elegidos */}
+              <div>
+                <p className="text-xs font-semibold text-[#374151] mb-2">Modelos de interés</p>
+                <div className="flex flex-col gap-1.5">
+                  {lineas.map((l, i) => {
+                    const modelo = MODELOS.find((m) => m.id === l.modeloId);
+                    return (
+                      <div
+                        key={i}
+                        className="flex items-center gap-3 bg-[#F9FAFB] rounded-xl px-3 py-2"
+                      >
+                        <Car className="w-4 h-4 text-[#9CA3AF] shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-semibold text-[#111827] truncate">
+                            {l.unidades}×{' '}
+                            {modelo ? `${modelo.marca} ${modelo.modelo}` : l.modeloId}
+                          </p>
+                        </div>
+                        <p className="text-sm font-bold text-[#0F3D2E] shrink-0">
+                          {formatCLPMillon(l.precio)}
+                        </p>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="flex items-center justify-between mt-2 pt-2 border-t border-[#F3F4F6]">
+                  <span className="text-xs text-[#6B7280]">Subtotal</span>
+                  <span className="text-sm font-bold text-[#0F3D2E]">
+                    {formatCLPMillon(montoTotal)}
+                  </span>
+                </div>
+              </div>
+
+              {/* QR */}
+              <div className="bg-[#F0FDF4] rounded-2xl p-3 flex flex-col items-center gap-2">
+                <QRCodeSVG value={qrUrl} size={112} />
+                <p className="text-[10px] text-[#6B7280] text-center leading-tight">
+                  Escanea para ver el comprobante
+                </p>
+              </div>
+
+              {/* Folio + fecha */}
+              <div className="flex items-center justify-between">
+                <p className="text-[10px] text-[#9CA3AF]">
+                  Folio: <span className="font-mono font-semibold">{folio}</span>
+                </p>
+                <p className="text-[10px] text-[#9CA3AF]">{fecha}</p>
+              </div>
+            </Card>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 // Inicializa la flota con un tipo vacío la primera vez que entra al paso 2
 function usarFlotaConDefecto(
   flota: TipoVehiculo[],
@@ -1668,9 +2495,38 @@ export default function PymeDiagnostico() {
           <div className="text-center py-16 text-[#9CA3AF]">Calculando plan…</div>
         );
       case 7:
+        return state.analisisFlota && state.planInfraestructura ? (
+          <Paso7
+            seleccion={state.seleccion}
+            flota={state.flota}
+            analisisFlota={state.analisisFlota}
+            planInfraestructura={state.planInfraestructura}
+            empresa={state.empresa}
+            contacto={state.contacto}
+          />
+        ) : (
+          <div className="text-center py-16 text-[#9CA3AF]">Cargando datos del proyecto…</div>
+        );
       case 8:
+        return state.planInfraestructura ? (
+          <Paso8
+            empresa={state.empresa}
+            contacto={state.contacto}
+            seleccion={state.seleccion}
+            flota={state.flota}
+            planInfraestructura={state.planInfraestructura}
+          />
+        ) : (
+          <div className="text-center py-16 text-[#9CA3AF]">Cargando datos del proyecto…</div>
+        );
       case 9:
-        return <PasoEnConstruccion paso={state.paso} />;
+        return (
+          <Paso9
+            empresa={state.empresa}
+            contacto={state.contacto}
+            seleccion={state.seleccion}
+          />
+        );
     }
   };
 
