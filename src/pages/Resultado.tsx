@@ -483,7 +483,7 @@ function RutaRecomendada({ infoCarga: _infoCarga }: { infoCarga: InfoCarga }) {
               <div>
                 <p className="text-white/50 text-[10px] uppercase tracking-wider mb-0.5">Precio especial</p>
                 <p className="text-white font-black text-3xl leading-none">
-                  {pagando ? 'Procesando…' : '$14.990'}
+                  {pagando ? 'Procesando…' : '$32.990'}
                 </p>
               </div>
               <div className="flex items-center gap-2 bg-white text-[#0F3D2E] font-bold text-sm px-5 py-3 rounded-2xl shrink-0 shadow-lg">
