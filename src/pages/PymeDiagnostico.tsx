@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -14,6 +14,10 @@ import {
   Trash2,
   Plus,
   Truck,
+  TrendingDown,
+  Leaf,
+  Car,
+  AlertTriangle,
 } from 'lucide-react';
 import Navbar from '../components/layout/Navbar';
 import Footer from '../components/layout/Footer';
@@ -21,12 +25,21 @@ import Container from '../components/layout/Container';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import Stepper from '../components/ui/Stepper';
+import StatCard from '../components/ui/StatCard';
+import TCOChart from '../components/charts/TCOChart';
+import { analizarFlota, generarSeriesFlota } from '../lib/flotaAnalysis';
+import { formatCLP, formatCLPMillon, formatAnios } from '../lib/format';
+import { MODELOS } from '../data/modelos';
+import { OFERTAS } from '../data/ofertas';
+import { PROVEEDORES } from '../data/proveedores';
+import { SEGMENTOS } from '../data/segmentos';
 import type {
   TipoVehiculo,
   SeleccionTipo,
   DatosSitio,
   DiagnosticoFlota,
   PlanInfraestructura,
+  ModeloEV,
 } from '../types';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -795,6 +808,388 @@ function PasoEnConstruccion({ paso }: { paso: number }) {
   );
 }
 
+// ── Paso 3: Dashboard diagnóstico ────────────────────────────────────────────
+
+const CARROCERIA_LABEL_ES: Record<string, string> = {
+  citycar: 'City car', hatchback: 'Hatchback', sedan: 'Sedán',
+  suv: 'SUV', pickup: 'Pickup', furgon: 'Furgón',
+};
+
+function Paso3({ analisis, flota }: { analisis: DiagnosticoFlota; flota: TipoVehiculo[] }) {
+  const { serieCombustion, serieElectrico, puntoEquilibrioMes } = useMemo(
+    () => generarSeriesFlota(flota, analisis.inversionNetaAgregada),
+    [flota, analisis.inversionNetaAgregada],
+  );
+
+  // Carrocerías únicas en la flota
+  const carroceriasUnicas = [...new Set(flota.map((t) => t.carroceria))];
+
+  return (
+    <div className="flex flex-col gap-7">
+      <div>
+        <h2 className="text-xl font-bold text-[#0F3D2E] mb-1">Diagnóstico de tu flota</h2>
+        <p className="text-sm text-[#6B7280]">
+          Potencial si electrificara toda la flota caracterizada. Sin recomendaciones automáticas —
+          tú decides qué conviene según tu operación.
+        </p>
+      </div>
+
+      {/* Resumen ejecutivo */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <StatCard
+          label="Ahorro mensual potencial"
+          value={formatCLP(analisis.ahorroMensualAgregado)}
+          sublabel="Si electrifica toda la flota"
+          icon={<TrendingDown className="w-4 h-4" />}
+          accent
+        />
+        <StatCard
+          label="Ahorro a 5 años"
+          value={formatCLPMillon(analisis.ahorroA5AniosAgregado)}
+          sublabel="Acumulado operacional"
+          icon={<BarChart2 className="w-4 h-4" />}
+        />
+        <StatCard
+          label="CO₂ evitado / año"
+          value={`${(analisis.co2EvitadoAnualAgregado / 1000).toFixed(1)} ton`}
+          sublabel="Emisiones directas del vehículo"
+          icon={<Leaf className="w-4 h-4" />}
+        />
+      </div>
+
+      {/* Gráfico TCO */}
+      <Card padding="md">
+        <h3 className="text-sm font-semibold text-[#374151] mb-1">Costo acumulado — flota completa</h3>
+        <p className="text-xs text-[#9CA3AF] mb-4">
+          Combustión vs eléctrico · Inversión inicial: {formatCLPMillon(analisis.inversionNetaAgregada)}
+          {puntoEquilibrioMes
+            ? ` · Equilibrio estimado: año ${(puntoEquilibrioMes / 12).toFixed(1)}`
+            : ''}
+        </p>
+        <TCOChart
+          serieCombustion={serieCombustion}
+          serieElectrico={serieElectrico}
+          inversionTotal={analisis.inversionNetaAgregada}
+        />
+      </Card>
+
+      {/* Ranking de priorización */}
+      <div>
+        <h3 className="text-base font-bold text-[#0F3D2E] mb-3">
+          Ranking de priorización
+        </h3>
+        <div className="flex flex-col gap-3">
+          {analisis.tipos.map((dt, i) => (
+            <Card key={dt.tipo.id} padding="md" className="flex flex-col sm:flex-row sm:items-start gap-4">
+              {/* Posición */}
+              <div className="shrink-0 flex items-center gap-2">
+                <div
+                  className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
+                    i === 0
+                      ? 'bg-[#16A34A] text-white'
+                      : i < Math.ceil(analisis.tipos.length / 2)
+                      ? 'bg-[#DCFCE7] text-[#15803D]'
+                      : 'bg-[#F3F4F6] text-[#6B7280]'
+                  }`}
+                >
+                  {i + 1}
+                </div>
+              </div>
+
+              {/* Info */}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap mb-1">
+                  <span className="font-semibold text-[#111827] text-sm">
+                    {dt.tipo.etiqueta || `Tipo ${i + 1}`}
+                  </span>
+                  <span className="text-xs bg-[#F3F4F6] text-[#6B7280] px-2 py-0.5 rounded-full">
+                    {CARROCERIA_LABEL_ES[dt.tipo.carroceria] ?? dt.tipo.carroceria} · {dt.tipo.cantidad} uds
+                  </span>
+                </div>
+                <p className="text-xs text-[#6B7280] mb-3 leading-relaxed">{dt.razonRanking}</p>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <div>
+                    <p className="text-[10px] text-[#9CA3AF] uppercase tracking-wide mb-0.5">Payback</p>
+                    <p className="text-sm font-bold text-[#111827]">{formatAnios(dt.paybackAjustado)}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-[#9CA3AF] uppercase tracking-wide mb-0.5">Ahorro / veh.</p>
+                    <p className="text-sm font-bold text-[#16A34A]">{formatCLP(dt.ahorroMensualPorVehiculo)} /mes</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-[#9CA3AF] uppercase tracking-wide mb-0.5">Ahorro total tipo</p>
+                    <p className="text-sm font-bold text-[#16A34A]">{formatCLP(dt.ahorroMensualTotal)} /mes</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-[#9CA3AF] uppercase tracking-wide mb-0.5">CO₂ evitado</p>
+                    <p className="text-sm font-bold text-[#374151]">
+                      {dt.co2EvitadoTotal >= 1000
+                        ? `${(dt.co2EvitadoTotal / 1000).toFixed(1)} ton/año`
+                        : `${Math.round(dt.co2EvitadoTotal)} kg/año`}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </Card>
+          ))}
+        </div>
+      </div>
+
+      {/* Modelos recomendados por segmento */}
+      <div>
+        <h3 className="text-base font-bold text-[#0F3D2E] mb-3">
+          Modelos disponibles por segmento
+        </h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {carroceriasUnicas.map((carroceria) => {
+            const modeloIds = SEGMENTOS[carroceria] ?? [];
+            const modelos = modeloIds
+              .map((id) => MODELOS.find((m) => m.id === id))
+              .filter((m): m is ModeloEV => m !== undefined);
+
+            return (
+              <Card key={carroceria} padding="md">
+                <p className="text-xs font-semibold text-[#9CA3AF] uppercase tracking-wider mb-3">
+                  {CARROCERIA_LABEL_ES[carroceria] ?? carroceria}
+                </p>
+                {modelos.length === 0 ? (
+                  <div className="flex items-start gap-2 bg-[#FEF9C3] border border-[#FDE68A] rounded-xl px-3 py-2.5">
+                    <AlertTriangle className="w-4 h-4 text-[#92400E] shrink-0 mt-0.5" />
+                    <p className="text-xs text-[#92400E]">
+                      Sin oferta disponible en el catálogo — consulta directamente a un proveedor.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-2">
+                    {modelos.map((m) => (
+                      <div key={m.id} className="flex items-center gap-3 py-2 border-b border-[#F3F4F6] last:border-0">
+                        <div className="w-9 h-9 rounded-xl bg-[#F3F4F6] flex items-center justify-center shrink-0">
+                          <Car className="w-4 h-4 text-[#9CA3AF]" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-semibold text-[#111827]">{m.marca} {m.modelo}</p>
+                          <p className="text-xs text-[#6B7280]">
+                            {m.autonomiaKm} km · {m.consumoKmKwh} km/kWh
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </Card>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Paso 4: Selección de recambio + ofertas ───────────────────────────────────
+
+function Paso4({
+  flota,
+  seleccion,
+  onSeleccionChange,
+}: {
+  flota: TipoVehiculo[];
+  seleccion: SeleccionTipo[];
+  onSeleccionChange: (s: SeleccionTipo[]) => void;
+}) {
+  const getSelTipo = (tipoId: string): SeleccionTipo =>
+    seleccion.find((s) => s.tipoId === tipoId) ?? {
+      tipoId,
+      cantidadRecambio: flota.find((t) => t.id === tipoId)?.cantidad ?? 0,
+      ofertas: [],
+    };
+
+  const updateSelTipo = (tipoId: string, partial: Partial<SeleccionTipo>) => {
+    const prev = getSelTipo(tipoId);
+    const updated = { ...prev, ...partial };
+    const others = seleccion.filter((s) => s.tipoId !== tipoId);
+    onSeleccionChange([...others, updated]);
+  };
+
+  const toggleOferta = (tipoId: string, ofertaId: string) => {
+    const sel = getSelTipo(tipoId);
+    const yaEsta = sel.ofertas.some((o) => o.ofertaId === ofertaId);
+    const nuevasOfertas = yaEsta
+      ? sel.ofertas.filter((o) => o.ofertaId !== ofertaId)
+      : [...sel.ofertas, { ofertaId, unidades: 1 }];
+    updateSelTipo(tipoId, { ofertas: nuevasOfertas });
+  };
+
+  const setUnidades = (tipoId: string, ofertaId: string, unidades: number) => {
+    const sel = getSelTipo(tipoId);
+    const nuevasOfertas = sel.ofertas.map((o) =>
+      o.ofertaId === ofertaId ? { ...o, unidades: Math.max(1, unidades) } : o,
+    );
+    updateSelTipo(tipoId, { ofertas: nuevasOfertas });
+  };
+
+  return (
+    <div className="flex flex-col gap-8">
+      <div>
+        <h2 className="text-xl font-bold text-[#0F3D2E] mb-1">
+          Selección de recambio
+        </h2>
+        <p className="text-sm text-[#6B7280]">
+          Define cuántos vehículos de cada tipo electrificarás y qué modelos te interesan.
+        </p>
+      </div>
+
+      {flota.map((tipo) => {
+        const sel = getSelTipo(tipo.id);
+        const modeloIds = SEGMENTOS[tipo.carroceria] ?? [];
+        const ofertasDelTipo = OFERTAS.filter((o) => modeloIds.includes(o.modeloId));
+        const unidadesAsignadas = sel.ofertas.reduce((s, o) => s + o.unidades, 0);
+        const excedido = unidadesAsignadas > sel.cantidadRecambio;
+
+        return (
+          <div key={tipo.id} className="flex flex-col gap-4">
+            {/* 4a: Cuántos recambiar */}
+            <Card padding="md">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-8 h-8 rounded-xl bg-[#0F3D2E] text-white flex items-center justify-center text-xs font-bold">
+                  <Truck className="w-4 h-4" />
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-[#111827]">
+                    {tipo.etiqueta || `Tipo: ${CARROCERIA_LABEL_ES[tipo.carroceria]}`}
+                  </p>
+                  <p className="text-xs text-[#9CA3AF]">
+                    {tipo.cantidad} vehículos caracterizados · {CARROCERIA_LABEL_ES[tipo.carroceria]}
+                  </p>
+                </div>
+              </div>
+
+              <div>
+                <FieldLabel hint={`Máximo ${tipo.cantidad} vehículos`}>
+                  Vehículos a recambiar de este tipo
+                </FieldLabel>
+                <NumberInput
+                  value={sel.cantidadRecambio}
+                  onChange={(v) => updateSelTipo(tipo.id, {
+                    cantidadRecambio: Math.min(tipo.cantidad, Math.max(0, v)),
+                    ofertas: [], // reset ofertas si cambia cantidad
+                  })}
+                  min={0}
+                  max={tipo.cantidad}
+                  suffix={`/ ${tipo.cantidad}`}
+                />
+              </div>
+
+              {sel.cantidadRecambio === 0 && (
+                <p className="mt-2 text-xs text-[#9CA3AF] bg-[#F9FAFB] rounded-xl px-3 py-2">
+                  Este tipo no entrará al plan de recambio.
+                </p>
+              )}
+            </Card>
+
+            {/* 4b: Ofertas (solo si cantidadRecambio > 0) */}
+            {sel.cantidadRecambio > 0 && (
+              <div className="pl-4 border-l-2 border-[#DCFCE7]">
+                <p className="text-sm font-semibold text-[#374151] mb-3">
+                  Ofertas disponibles para {CARROCERIA_LABEL_ES[tipo.carroceria]}
+                </p>
+
+                {/* Indicador de asignación */}
+                <div
+                  className={`mb-3 flex items-center gap-2 text-xs px-3 py-2 rounded-xl border ${
+                    excedido
+                      ? 'bg-red-50 border-red-200 text-red-600'
+                      : unidadesAsignadas === sel.cantidadRecambio
+                      ? 'bg-[#F0FDF4] border-[#BBF7D0] text-[#15803D]'
+                      : 'bg-[#F9FAFB] border-[#E5E7EB] text-[#6B7280]'
+                  }`}
+                >
+                  {excedido ? (
+                    <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                  ) : (
+                    <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                  )}
+                  {unidadesAsignadas} de {sel.cantidadRecambio} vehículos asignados
+                  {excedido && ' — reducir unidades'}
+                </div>
+
+                {ofertasDelTipo.length === 0 ? (
+                  <div className="flex items-start gap-2 bg-[#FEF9C3] border border-[#FDE68A] rounded-xl px-3 py-2.5">
+                    <AlertTriangle className="w-4 h-4 text-[#92400E] shrink-0 mt-0.5" />
+                    <p className="text-xs text-[#92400E]">
+                      Sin oferta disponible para este segmento. Consulta directamente a un proveedor.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {ofertasDelTipo.map((oferta) => {
+                      const modelo = MODELOS.find((m) => m.id === oferta.modeloId);
+                      const proveedor = PROVEEDORES.find((p) => p.id === oferta.proveedorId);
+                      const selItem = sel.ofertas.find((o) => o.ofertaId === oferta.id);
+                      const marcada = !!selItem;
+
+                      return (
+                        <div
+                          key={oferta.id}
+                          className={`rounded-2xl border p-4 transition-all duration-150 cursor-pointer ${
+                            marcada
+                              ? 'border-[#16A34A] bg-[#F0FDF4]'
+                              : 'border-[#E5E7EB] bg-white hover:border-[#16A34A] hover:bg-[#F9FAFB]'
+                          }`}
+                          onClick={() => toggleOferta(tipo.id, oferta.id)}
+                        >
+                          {/* Logo placeholder */}
+                          <div className="flex items-center gap-2 mb-2">
+                            <div className="w-9 h-9 rounded-xl bg-[#F3F4F6] flex items-center justify-center shrink-0">
+                              <Car className="w-4 h-4 text-[#9CA3AF]" />
+                            </div>
+                            <div>
+                              <p className="text-sm font-semibold text-[#111827]">
+                                {modelo?.marca} {modelo?.modelo}
+                              </p>
+                              <p className="text-xs text-[#9CA3AF]">{proveedor?.nombre}</p>
+                            </div>
+                            {marcada && (
+                              <CheckCircle2 className="w-4 h-4 text-[#16A34A] ml-auto shrink-0" />
+                            )}
+                          </div>
+                          <div className="flex items-center justify-between text-xs text-[#6B7280]">
+                            <span>{modelo?.autonomiaKm} km · {modelo?.consumoKmKwh} km/kWh</span>
+                            <span className="font-bold text-[#111827]">
+                              {formatCLPMillon(oferta.precio)}
+                            </span>
+                          </div>
+
+                          {/* Input unidades (solo si marcada) */}
+                          {marcada && (
+                            <div
+                              className="mt-3 pt-3 border-t border-[#E5E7EB]"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <FieldLabel>Unidades de esta oferta</FieldLabel>
+                              <NumberInput
+                                value={selItem!.unidades}
+                                onChange={(v) => setUnidades(tipo.id, oferta.id, v)}
+                                min={1}
+                                max={sel.cantidadRecambio}
+                                suffix="uds"
+                              />
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 // Inicializa la flota con un tipo vacío la primera vez que entra al paso 2
 function usarFlotaConDefecto(
   flota: TipoVehiculo[],
@@ -855,11 +1250,42 @@ export default function PymeDiagnostico() {
     state.paso,
   );
 
+  // Calcula el análisis de flota al entrar al paso 3
+  useEffect(() => {
+    if (state.paso === 3 && state.flota.length > 0) {
+      const analisis = analizarFlota(state.flota);
+      set({ analisisFlota: analisis });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.paso]);
+
+  // Inicializa selección con cantidad completa de cada tipo al entrar al paso 4
+  useEffect(() => {
+    if (state.paso === 4 && state.seleccion.length === 0 && state.flota.length > 0) {
+      const selInicial: SeleccionTipo[] = state.flota.map((tipo) => ({
+        tipoId: tipo.id,
+        cantidadRecambio: tipo.cantidad,
+        ofertas: [],
+      }));
+      set({ seleccion: selInicial });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.paso]);
+
   // Validación del botón "Continuar" por paso
   const puedeAvanzar = (): boolean => {
     switch (state.paso) {
       case 1: return false; // Paso 1 usa el modal de pago, no el botón de navegación
       case 2: return state.flota.length >= 1;
+      case 4: {
+        // Al menos un tipo con recambio > 0 y sin excedido
+        const tiposActivos = state.seleccion.filter((s) => s.cantidadRecambio > 0);
+        if (tiposActivos.length === 0) return false;
+        const hayExcedido = tiposActivos.some(
+          (s) => s.ofertas.reduce((sum, o) => sum + o.unidades, 0) > s.cantidadRecambio,
+        );
+        return !hayExcedido;
+      }
       default: return true;
     }
   };
@@ -884,7 +1310,19 @@ export default function PymeDiagnostico() {
           />
         );
       case 3:
+        return state.analisisFlota ? (
+          <Paso3 analisis={state.analisisFlota} flota={state.flota} />
+        ) : (
+          <div className="text-center py-16 text-[#9CA3AF]">Calculando análisis…</div>
+        );
       case 4:
+        return (
+          <Paso4
+            flota={state.flota}
+            seleccion={state.seleccion}
+            onSeleccionChange={(s) => set({ seleccion: s })}
+          />
+        );
       case 5:
       case 6:
       case 7:

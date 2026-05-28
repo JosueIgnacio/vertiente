@@ -12,8 +12,17 @@ import {
 import type { TCOResult } from '../../types';
 import { formatCLP, formatCLPMillon } from '../../lib/format';
 
+/**
+ * Acepta:
+ *  - `result`: TCOResult de persona natural (contiene todo)
+ *  - O bien series raw + inversionTotal para el gráfico de flota pyme
+ */
 interface TCOChartProps {
-  result: TCOResult;
+  result?: TCOResult;
+  // Alternativa: series raw (uso pyme/flota)
+  serieCombustion?: { mes: number; costo: number }[];
+  serieElectrico?: { mes: number; costo: number }[];
+  inversionTotal?: number;
 }
 
 interface ChartDataPoint {
@@ -50,18 +59,29 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 
 // ── Componente principal ──────────────────────────────────────────────────────
 
-export default function TCOChart({ result }: TCOChartProps) {
-  const data: ChartDataPoint[] = result.serieCombustion.map((c, i) => ({
+export default function TCOChart({
+  result,
+  serieCombustion: seriesCombRaw,
+  serieElectrico: seriesEVRaw,
+  inversionTotal,
+}: TCOChartProps) {
+  // Usar series del result (persona natural) o series raw (flota pyme)
+  const serieC = result ? result.serieCombustion : (seriesCombRaw ?? []);
+  const serieE = result ? result.serieElectrico  : (seriesEVRaw  ?? []);
+  const inversionRef = result ? result.inversionNetaEV : (inversionTotal ?? 0);
+  const totalMeses = result ? result.totalMeses : (serieC.length - 1);
+
+  const data: ChartDataPoint[] = serieC.map((c, i) => ({
     mes: c.mes,
     combustion: Math.round(c.costo),
-    electrico: Math.round(result.serieElectrico[i].costo),
+    electrico: Math.round(serieE[i]?.costo ?? 0),
   }));
 
   // Cruce: primer punto donde eléctrico <= combustión (ignoramos mes 0)
   const crossoverMes = data.find((d) => d.mes > 0 && d.electrico <= d.combustion)?.mes;
 
   // Ticks en eje X: solo en años completos
-  const totalAnios = Math.floor(result.totalMeses / 12);
+  const totalAnios = Math.floor(totalMeses / 12);
   const yearTicks = Array.from({ length: totalAnios }, (_, i) => (i + 1) * 12);
 
   const yFormatter = (value: number) => {
@@ -101,19 +121,21 @@ export default function TCOChart({ result }: TCOChartProps) {
         />
 
         {/* Línea horizontal: punto de partida del eléctrico en eje Y */}
-        <ReferenceLine
-          y={result.inversionNetaEV}
-          stroke="#16A34A"
-          strokeDasharray="4 3"
-          strokeOpacity={0.55}
-          label={{
-            value: formatCLPMillon(result.inversionNetaEV),
-            position: 'insideTopLeft',
-            fontSize: 9,
-            fill: '#16A34A',
-            fontWeight: 600,
-          }}
-        />
+        {inversionRef > 0 && (
+          <ReferenceLine
+            y={inversionRef}
+            stroke="#16A34A"
+            strokeDasharray="4 3"
+            strokeOpacity={0.55}
+            label={{
+              value: formatCLPMillon(inversionRef),
+              position: 'insideTopLeft',
+              fontSize: 9,
+              fill: '#16A34A',
+              fontWeight: 600,
+            }}
+          />
+        )}
 
         {/* Línea vertical: punto de equilibrio (cruce de curvas) */}
         {crossoverMes && (
