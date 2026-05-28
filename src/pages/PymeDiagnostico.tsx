@@ -11,6 +11,9 @@ import {
   Users,
   X,
   Loader2,
+  Trash2,
+  Plus,
+  Truck,
 } from 'lucide-react';
 import Navbar from '../components/layout/Navbar';
 import Footer from '../components/layout/Footer';
@@ -482,7 +485,303 @@ function Paso1({
   );
 }
 
-// ── Stubs para pasos 2–9 ──────────────────────────────────────────────────────
+// ── Paso 2: Caracterización de flota ─────────────────────────────────────────
+
+function NumberInput({
+  value,
+  onChange,
+  min,
+  max,
+  prefix,
+  suffix,
+}: {
+  value: number;
+  onChange: (v: number) => void;
+  min?: number;
+  max?: number;
+  prefix?: string;
+  suffix?: string;
+}) {
+  return (
+    <div className="flex items-center border border-[#E5E7EB] rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-[#16A34A] focus-within:border-transparent transition-all">
+      {prefix && (
+        <span className="px-3 bg-[#F9FAFB] border-r border-[#E5E7EB] text-sm text-[#6B7280] flex items-center py-3 shrink-0">
+          {prefix}
+        </span>
+      )}
+      <input
+        type="number"
+        value={value}
+        min={min}
+        max={max}
+        onChange={(e) => onChange(Number(e.target.value))}
+        className="flex-1 px-4 py-3 text-sm text-[#111827] outline-none bg-white min-w-0"
+      />
+      {suffix && (
+        <span className="px-3 bg-[#F9FAFB] border-l border-[#E5E7EB] text-sm text-[#6B7280] flex items-center py-3 shrink-0">
+          {suffix}
+        </span>
+      )}
+    </div>
+  );
+}
+
+type Carroceria = TipoVehiculo['carroceria'];
+
+const CARROCERIA_LABELS: Record<Carroceria, string> = {
+  citycar: 'City car',
+  hatchback: 'Hatchback',
+  sedan: 'Sedán',
+  suv: 'SUV',
+  pickup: 'Pickup',
+  furgon: 'Furgón',
+};
+
+function crearTipoVacío(): TipoVehiculo {
+  return {
+    id: crypto.randomUUID(),
+    etiqueta: '',
+    carroceria: 'sedan',
+    cantidad: 1,
+    antiguedadAnios: 3,
+    kmDia: 80,
+    horasOperacion: 8,
+    rendimientoKmL: 10,
+    mantencionAnual: 540_000,
+  };
+}
+
+function TipoVehiculoForm({
+  tipo,
+  index,
+  total,
+  onChange,
+  onEliminar,
+}: {
+  tipo: TipoVehiculo;
+  index: number;
+  total: number;
+  onChange: (t: TipoVehiculo) => void;
+  onEliminar: () => void;
+}) {
+  const set = (partial: Partial<TipoVehiculo>) => onChange({ ...tipo, ...partial });
+
+  return (
+    <Card padding="md" className="relative">
+      {/* Header del tipo */}
+      <div className="flex items-center justify-between mb-5">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-xl bg-[#0F3D2E] text-white flex items-center justify-center text-xs font-bold">
+            {index + 1}
+          </div>
+          <span className="text-sm font-semibold text-[#374151]">
+            {tipo.etiqueta || `Tipo de vehículo ${index + 1}`}
+          </span>
+        </div>
+        {total > 1 && (
+          <button
+            type="button"
+            onClick={onEliminar}
+            className="p-2 rounded-xl text-[#9CA3AF] hover:text-red-500 hover:bg-red-50 transition-colors cursor-pointer"
+            title="Eliminar este tipo"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+        )}
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {/* Etiqueta */}
+        <div className="sm:col-span-2">
+          <FieldLabel hint='ej. "Camionetas de reparto", "Autos de vendedores"'>
+            Etiqueta del grupo
+          </FieldLabel>
+          <TextInput
+            value={tipo.etiqueta}
+            onChange={(v) => set({ etiqueta: v })}
+            placeholder="ej. Camionetas de reparto"
+          />
+        </div>
+
+        {/* Carrocería */}
+        <div>
+          <FieldLabel>Carrocería</FieldLabel>
+          <SelectInput
+            value={tipo.carroceria}
+            onChange={(v) => set({ carroceria: v as Carroceria })}
+            options={Object.entries(CARROCERIA_LABELS).map(([value, label]) => ({
+              value,
+              label,
+            }))}
+          />
+        </div>
+
+        {/* Cantidad */}
+        <div>
+          <FieldLabel hint="Vehículos de este tipo">Cantidad</FieldLabel>
+          <NumberInput
+            value={tipo.cantidad}
+            onChange={(v) => set({ cantidad: Math.max(1, v) })}
+            min={1}
+            suffix="vehículos"
+          />
+        </div>
+
+        {/* Antigüedad */}
+        <div>
+          <FieldLabel>Antigüedad promedio</FieldLabel>
+          <NumberInput
+            value={tipo.antiguedadAnios}
+            onChange={(v) => set({ antiguedadAnios: Math.max(0, v) })}
+            min={0}
+            suffix="años"
+          />
+        </div>
+
+        {/* km/día */}
+        <div>
+          <FieldLabel>km / día por vehículo</FieldLabel>
+          <NumberInput
+            value={tipo.kmDia}
+            onChange={(v) => set({ kmDia: Math.max(1, v) })}
+            min={1}
+            suffix="km"
+          />
+        </div>
+
+        {/* Horas de operación */}
+        <div>
+          <FieldLabel hint="Crítico para dimensionar la infraestructura de carga">
+            Horas de operación al día
+          </FieldLabel>
+          <NumberInput
+            value={tipo.horasOperacion}
+            onChange={(v) => set({ horasOperacion: Math.min(24, Math.max(1, v)) })}
+            min={1}
+            max={23}
+            suffix="h / día"
+          />
+        </div>
+
+        {/* Rendimiento */}
+        <div>
+          <FieldLabel hint="Sedán / hatchback: 10–14 km/L · Pickup/furgón: 7–10 km/L">
+            Rendimiento actual
+          </FieldLabel>
+          <NumberInput
+            value={tipo.rendimientoKmL}
+            onChange={(v) => set({ rendimientoKmL: Math.max(1, v) })}
+            min={1}
+            suffix="km / L"
+          />
+        </div>
+
+        {/* Mantención */}
+        <div>
+          <FieldLabel hint="Aceite, filtros, revisión técnica, frenos, etc.">
+            Mantención anual promedio
+          </FieldLabel>
+          <NumberInput
+            value={tipo.mantencionAnual}
+            onChange={(v) => set({ mantencionAnual: Math.max(0, v) })}
+            min={0}
+            prefix="$"
+            suffix="/ año"
+          />
+        </div>
+      </div>
+    </Card>
+  );
+}
+
+function Paso2({
+  flota,
+  onFlotaChange,
+}: {
+  flota: TipoVehiculo[];
+  onFlotaChange: (f: TipoVehiculo[]) => void;
+}) {
+  const agregarTipo = () => {
+    onFlotaChange([...flota, crearTipoVacío()]);
+  };
+
+  const actualizarTipo = (index: number, tipo: TipoVehiculo) => {
+    const nueva = [...flota];
+    nueva[index] = tipo;
+    onFlotaChange(nueva);
+  };
+
+  const eliminarTipo = (index: number) => {
+    onFlotaChange(flota.filter((_, i) => i !== index));
+  };
+
+  // Total de vehículos sumados
+  const totalVehiculos = flota.reduce((s, t) => s + t.cantidad, 0);
+
+  return (
+    <div className="flex flex-col gap-6">
+      {/* Header */}
+      <div>
+        <h2 className="text-xl font-bold text-[#0F3D2E] mb-1">
+          Caracterización de flota
+        </h2>
+        <p className="text-sm text-[#6B7280]">
+          Agrupa los vehículos de características similares. Cada grupo se analiza por separado
+          para identificar cuáles conviene electrificar primero.
+        </p>
+      </div>
+
+      {/* Resumen flotante */}
+      {flota.length > 0 && (
+        <div className="bg-[#F0FDF4] border border-[#BBF7D0] rounded-2xl px-5 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-2 text-sm text-[#15803D]">
+            <Truck className="w-4 h-4" />
+            <span className="font-medium">
+              {flota.length} {flota.length === 1 ? 'tipo' : 'tipos'} · {totalVehiculos}{' '}
+              {totalVehiculos === 1 ? 'vehículo' : 'vehículos'} en total
+            </span>
+          </div>
+          {flota.length >= 1 && (
+            <span className="text-xs text-[#16A34A] font-medium">
+              ✓ Listo para continuar
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* Lista de tipos */}
+      {flota.map((tipo, i) => (
+        <TipoVehiculoForm
+          key={tipo.id}
+          tipo={tipo}
+          index={i}
+          total={flota.length}
+          onChange={(t) => actualizarTipo(i, t)}
+          onEliminar={() => eliminarTipo(i)}
+        />
+      ))}
+
+      {/* Botón agregar */}
+      <button
+        type="button"
+        onClick={agregarTipo}
+        className="flex items-center justify-center gap-2 w-full py-4 border-2 border-dashed border-[#D1FAE5] rounded-2xl text-[#16A34A] text-sm font-medium hover:bg-[#F0FDF4] hover:border-[#16A34A] transition-all cursor-pointer"
+      >
+        <Plus className="w-4 h-4" />
+        Agregar otro tipo de vehículo
+      </button>
+
+      {/* Validación */}
+      {flota.length === 0 && (
+        <p className="text-xs text-[#9CA3AF] text-center">
+          Agrega al menos un tipo de vehículo para continuar.
+        </p>
+      )}
+    </div>
+  );
+}
+
+// ── Stubs para pasos 3–9 ──────────────────────────────────────────────────────
 
 function PasoEnConstruccion({ paso }: { paso: number }) {
   return (
@@ -494,6 +793,20 @@ function PasoEnConstruccion({ paso }: { paso: number }) {
       <p className="text-sm text-[#6B7280]">Este paso se implementa en las próximas etapas.</p>
     </Card>
   );
+}
+
+// Inicializa la flota con un tipo vacío la primera vez que entra al paso 2
+function usarFlotaConDefecto(
+  flota: TipoVehiculo[],
+  onFlotaChange: (f: TipoVehiculo[]) => void,
+  paso: number,
+) {
+  useEffect(() => {
+    if (paso === 2 && flota.length === 0) {
+      onFlotaChange([crearTipoVacío()]);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [paso]);
 }
 
 // ── Página principal ──────────────────────────────────────────────────────────
@@ -535,6 +848,13 @@ export default function PymeDiagnostico() {
     setShowModalPago(false);
   };
 
+  // Inicializa flota con un tipo vacío al entrar al paso 2
+  usarFlotaConDefecto(
+    state.flota,
+    (f) => set({ flota: f }),
+    state.paso,
+  );
+
   // Validación del botón "Continuar" por paso
   const puedeAvanzar = (): boolean => {
     switch (state.paso) {
@@ -557,6 +877,12 @@ export default function PymeDiagnostico() {
           />
         );
       case 2:
+        return (
+          <Paso2
+            flota={state.flota}
+            onFlotaChange={(f) => set({ flota: f })}
+          />
+        );
       case 3:
       case 4:
       case 5:
