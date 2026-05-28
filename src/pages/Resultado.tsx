@@ -539,7 +539,7 @@ function RutaRecomendada({ infoCarga: _infoCarga }: { infoCarga: InfoCarga }) {
             <div className="flex items-end justify-between gap-3">
               <div>
                 <p className="text-[10px] uppercase tracking-wider mb-0.5" style={{ color: 'rgba(253,230,138,0.5)' }}>Desde</p>
-                <p className="font-black text-3xl leading-none" style={{ color: '#fde68a' }}>$99.990</p>
+                <p className="font-black text-3xl leading-none" style={{ color: '#fde68a' }}>$159.990</p>
               </div>
               <div className="flex items-center gap-2 font-bold text-sm px-5 py-3 rounded-2xl shrink-0 shadow-lg"
                 style={{ background: '#fbbf24', color: '#431407' }}>

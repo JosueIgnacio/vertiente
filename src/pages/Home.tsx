@@ -335,7 +335,7 @@ function PymeBanner() {
                 </span>
               </div>
               <h2 className="text-3xl font-bold text-white leading-tight">
-                Diagnóstico de flota<br />desde $99.990
+                Diagnóstico de flota<br />desde $159.990
               </h2>
               <p className="text-white/70 text-sm leading-relaxed max-w-md">
                 Evaluamos cada vehículo de tu flota, calculamos el TCO por grupo, analizamos la factibilidad de carga y te entregamos un informe personalizado con acompañamiento.

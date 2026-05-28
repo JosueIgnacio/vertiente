@@ -114,7 +114,7 @@ export default function Pyme() {
               <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
                 <div className="bg-white/10 border border-white/20 rounded-2xl px-6 py-4 text-white">
                   <p className="text-xs text-white/60 mb-1 uppercase tracking-wider">Precio diagnóstico base</p>
-                  <p className="text-3xl font-extrabold">$99.990</p>
+                  <p className="text-3xl font-extrabold">$159.990</p>
                   <p className="text-xs text-white/60 mt-1">Flota de 2–5 vehículos · Informe + 2 reuniones</p>
                 </div>
                 <button
@@ -203,7 +203,7 @@ export default function Pyme() {
               </div>
               <div className="shrink-0 flex flex-col items-start gap-3">
                 <div className="bg-white rounded-xl border border-[#BBF7D0] p-5 text-center">
-                  <p className="text-3xl font-extrabold text-[#0F3D2E]">$99.990</p>
+                  <p className="text-3xl font-extrabold text-[#0F3D2E]">$159.990</p>
                   <p className="text-xs text-[#6B7280] mt-1">Flota 2–5 vehículos</p>
                   <div className="mt-3 border-t border-[#E5E7EB] pt-3">
                     <p className="text-sm font-semibold text-[#374151]">$149.990</p>
