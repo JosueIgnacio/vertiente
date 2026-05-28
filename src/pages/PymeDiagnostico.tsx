@@ -2691,27 +2691,27 @@ export default function PymeDiagnostico() {
            Panel: barra flotante visible solo cuando adminMode está activo.
       ──────────────────────────────────────────────────────────────────────── */}
 
-      {/* Trigger oculto */}
+      {/* Trigger admin — fijo al costado derecho, centro vertical */}
       <button
         type="button"
         onClick={toggleAdmin}
         title={adminMode ? 'Desactivar modo admin' : 'Activar modo admin'}
         className={`
-          fixed bottom-3 right-3 z-40 flex items-center gap-1.5 px-2.5 py-1.5 rounded-full
-          text-[10px] font-semibold border transition-all duration-200 cursor-pointer
+          fixed right-0 top-1/2 -translate-y-1/2 z-50 flex items-center gap-1.5 px-3 py-2 rounded-l-xl
+          text-xs font-bold border-l border-t border-b transition-all duration-200 cursor-pointer shadow-md
           ${adminMode
-            ? 'bg-orange-500 border-orange-600 text-white shadow-lg shadow-orange-200'
-            : 'bg-white border-[#E5E7EB] text-[#D1D5DB] hover:text-[#9CA3AF] hover:border-[#D1D5DB] opacity-30 hover:opacity-100'
+            ? 'bg-orange-500 border-orange-600 text-white shadow-orange-300'
+            : 'bg-white border-[#D1D5DB] text-[#9CA3AF] hover:text-[#374151] hover:border-[#9CA3AF]'
           }
         `}
       >
-        <FlaskConical className="w-3 h-3" />
-        {adminMode ? 'Admin ON' : 'admin'}
+        <FlaskConical className="w-3.5 h-3.5" />
+        {adminMode ? 'Admin ON' : 'Admin'}
       </button>
 
       {/* Barra flotante de navegación rápida (solo cuando adminMode activo) */}
       {adminMode && (
-        <div className="fixed bottom-12 left-1/2 -translate-x-1/2 z-40 flex items-center gap-2 bg-[#1C1917] border border-orange-500/40 rounded-2xl px-4 py-2.5 shadow-2xl shadow-black/40">
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 bg-[#1C1917] border border-orange-500/40 rounded-2xl px-4 py-2.5 shadow-2xl shadow-black/40">
           <span className="text-[10px] font-bold text-orange-400 uppercase tracking-widest mr-1 shrink-0">
             Admin
           </span>
