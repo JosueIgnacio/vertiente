@@ -204,11 +204,7 @@ export default function Pyme() {
               <div className="shrink-0 flex flex-col items-start gap-3">
                 <div className="bg-white rounded-xl border border-[#BBF7D0] p-5 text-center">
                   <p className="text-3xl font-extrabold text-[#0F3D2E]">$159.990</p>
-                  <p className="text-xs text-[#6B7280] mt-1">Flota 2–5 vehículos</p>
-                  <div className="mt-3 border-t border-[#E5E7EB] pt-3">
-                    <p className="text-sm font-semibold text-[#374151]">$149.990</p>
-                    <p className="text-xs text-[#6B7280]">Flota 6–20 vehículos</p>
-                  </div>
+                  <p className="text-xs text-[#6B7280] mt-1">Diagnóstico completo de flota</p>
                 </div>
                 <button
                   type="button"
