@@ -56,4 +56,23 @@ export const MODELOS: ModeloEV[] = [
     consumoKmKwh: 5.0,
     plazas: 5,
   },
+  // ── Segmentos pyme ──────────────────────────────────────────────────────────
+  {
+    id: 'maxus-t90',
+    marca: 'Maxus',
+    modelo: 'T90 EV',
+    carroceria: 'Pickup',
+    autonomiaKm: 330,
+    consumoKmKwh: 4.0,
+    plazas: 5,
+  },
+  {
+    id: 'maxus-edelivery3',
+    marca: 'Maxus',
+    modelo: 'eDeliver 3',
+    carroceria: 'Furgón',
+    autonomiaKm: 300,
+    consumoKmKwh: 4.5,
+    plazas: 3,
+  },
 ];

@@ -63,6 +63,49 @@ export const INSTALACION_MARGEN_RANGO = 0.12;              // ±12%
 /** Tasa mensual referencial BancoEstado Crédito Verde (equivalente a CAE referencial) */
 export const TASA_MENSUAL_REFERENCIAL = 0.0089;
 
+// ── Análisis de flota pyme ────────────────────────────────────────────────────
+
+/** Valor de reventa estimado de un vehículo nuevo (0 años) */
+export const REVENTA_BASE_NUEVA = 10_000_000;
+
+/** Pérdida de valor de reventa por año */
+export const DEPRECIACION_ANUAL = 500_000;
+
+/** Valor mínimo de reventa (vehículos muy antiguos) */
+export const PISO_REVENTA = 2_000_000;
+
+/** Años de payback restados por cada año de antigüedad sobre la referencia */
+export const BONO_POR_ANIO_EXTRA_EDAD = 0.3;
+
+/** Edad de referencia para el bono de antigüedad */
+export const EDAD_REFERENCIA = 5;
+
+/** Factor de emisión de CO2 por litro de bencina (kg CO2/L) */
+export const FACTOR_EMISION_BENCINA = 2.3;
+
+/** Factor de emisión de CO2 por kWh de la red eléctrica chilena (kg CO2/kWh) */
+export const FACTOR_EMISION_RED_ELECTRICA = 0.4;
+
+// ── Dimensionamiento de infraestructura pyme ──────────────────────────────────
+
+/** Potencia cargador AC estándar para pyme (kW) */
+export const POTENCIA_AC_ESTANDAR_PYME = 7.4;
+
+/** Potencia cargador DC estándar (kW) */
+export const POTENCIA_DC_ESTANDAR = 50;
+
+/** Capacidad diaria útil de una unidad DC (kWh/día, referencial) */
+export const CAPACIDAD_DIARIA_UTIL_DC = 200;
+
+/** Costo de un cargador DC instalado ($ — respeta regla "10x AC") */
+export const COSTO_CARGADOR_DC_INSTALADO = 20_000_000;
+
+/** Factor de utilización AC: margen para no asumir uso 100% de la ventana */
+export const FACTOR_UTILIZACION_AC = 0.85;
+
+/** Costo adicional por cada cargador AC extra más allá del primero del sitio */
+export const COSTO_INCREMENTAL_CARGADOR_AC = 300_000;
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Defaults del formulario de diagnóstico (persona natural)
 // ─────────────────────────────────────────────────────────────────────────────

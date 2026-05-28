@@ -9,4 +9,7 @@ export const OFERTAS: Oferta[] = [
   { id: 'ev-ioniq5',      modeloId: 'hyundai-ioniq5',      proveedorId: 'evstore', precio: 39_990_000 },
   { id: 'verde-geely',    modeloId: 'geely-ex2-pro',       proveedorId: 'verde',   precio: 16_990_000 },
   { id: 'verde-atto3',    modeloId: 'byd-atto3',           proveedorId: 'verde',   precio: 30_000_000 },
+  // ── Segmentos pyme ──────────────────────────────────────────────────────────
+  { id: 'verde-t90',      modeloId: 'maxus-t90',           proveedorId: 'verde',   precio: 33_500_000 },
+  { id: 'verde-edelivery',modeloId: 'maxus-edelivery3',    proveedorId: 'verde',   precio: 32_000_000 },
 ];
