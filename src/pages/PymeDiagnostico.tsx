@@ -28,6 +28,7 @@ import Stepper from '../components/ui/Stepper';
 import StatCard from '../components/ui/StatCard';
 import TCOChart from '../components/charts/TCOChart';
 import { analizarFlota, generarSeriesFlota } from '../lib/flotaAnalysis';
+import { dimensionarInfraestructura } from '../lib/infraestructuraPyme';
 import { formatCLP, formatCLPMillon, formatAnios } from '../lib/format';
 import { MODELOS } from '../data/modelos';
 import { OFERTAS } from '../data/ofertas';
@@ -1190,6 +1191,322 @@ function Paso4({
   );
 }
 
+// ── Paso 5: Evaluación del sitio ──────────────────────────────────────────────
+
+function Paso5({
+  sitio,
+  onSitioChange,
+}: {
+  sitio: DatosSitio;
+  onSitioChange: (s: DatosSitio) => void;
+}) {
+  const set = (partial: Partial<DatosSitio>) => onSitioChange({ ...sitio, ...partial });
+
+  return (
+    <div className="flex flex-col gap-6">
+      <div>
+        <h2 className="text-xl font-bold text-[#0F3D2E] mb-1">Evaluación del sitio</h2>
+        <p className="text-sm text-[#6B7280]">
+          Información del lugar donde se instalarán los cargadores. Usada para dimensionar
+          la infraestructura y estimar el costo de instalación.
+        </p>
+      </div>
+
+      <Card padding="lg" className="flex flex-col gap-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+          <div>
+            <FieldLabel hint="Cantidad de puestos disponibles para instalar cargadores">
+              Estacionamientos para carga
+            </FieldLabel>
+            <NumberInput
+              value={sitio.estacionamientos}
+              onChange={(v) => set({ estacionamientos: Math.max(1, v) })}
+              min={1}
+              suffix="puestos"
+            />
+          </div>
+
+          <div>
+            <FieldLabel hint="Capacidad eléctrica actual del empalme del sitio">
+              Potencia conectada del sitio
+            </FieldLabel>
+            <NumberInput
+              value={sitio.potenciaConectada}
+              onChange={(v) => set({ potenciaConectada: Math.max(1, v) })}
+              min={1}
+              suffix="kW"
+            />
+          </div>
+
+          <div>
+            <FieldLabel hint="Distancia desde el medidor a la calle (o acometida eléctrica)">
+              Distancia acometida
+            </FieldLabel>
+            <NumberInput
+              value={sitio.distAcometida}
+              onChange={(v) => set({ distAcometida: Math.max(1, v) })}
+              min={1}
+              suffix="m"
+            />
+          </div>
+
+          <div>
+            <FieldLabel hint="Distancia desde el medidor hasta el área de estacionamiento">
+              Distancia interna medidor → estacionamiento
+            </FieldLabel>
+            <NumberInput
+              value={sitio.distInterna}
+              onChange={(v) => set({ distInterna: Math.max(1, v) })}
+              min={1}
+              suffix="m"
+            />
+          </div>
+        </div>
+
+        <div>
+          <FieldLabel>Tipo de canalización eléctrica</FieldLabel>
+          <ToggleGroup<'sobrepuesta' | 'soterrada'>
+            value={sitio.canalizacion}
+            onChange={(v) => set({ canalizacion: v })}
+            options={[
+              { value: 'sobrepuesta', label: 'Sobrepuesta', desc: 'Canaleta o ducto visible' },
+              { value: 'soterrada', label: 'Soterrada', desc: 'Zanja o ducto enterrado (+$500K)' },
+            ]}
+          />
+        </div>
+
+        <div>
+          <FieldLabel>Tipo de empalme eléctrico</FieldLabel>
+          <ToggleGroup<'ampliacion' | 'dedicado'>
+            value={sitio.empalme}
+            onChange={(v) => set({ empalme: v })}
+            options={[
+              { value: 'ampliacion', label: 'Ampliación del empalme existente', desc: 'Más económico' },
+              { value: 'dedicado', label: 'Empalme dedicado', desc: 'Mayor inversión (+$250K)' },
+            ]}
+          />
+        </div>
+      </Card>
+
+      {/* Toggle carga rápida */}
+      <div>
+        <button
+          type="button"
+          onClick={() => set({ quiereCargaRapida: !sitio.quiereCargaRapida })}
+          className={`w-full flex items-center gap-3 p-4 rounded-2xl border-2 transition-all duration-150 cursor-pointer text-left ${
+            sitio.quiereCargaRapida
+              ? 'border-[#16A34A] bg-[#F0FDF4]'
+              : 'border-[#E5E7EB] bg-white hover:border-[#16A34A]'
+          }`}
+        >
+          <div
+            className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
+              sitio.quiereCargaRapida ? 'bg-[#16A34A] text-white' : 'bg-[#F3F4F6] text-[#9CA3AF]'
+            }`}
+          >
+            <Zap className="w-5 h-5" />
+          </div>
+          <div>
+            <p className={`text-sm font-semibold ${sitio.quiereCargaRapida ? 'text-[#15803D]' : 'text-[#374151]'}`}>
+              Quiero evaluar infraestructura de carga rápida (más de 50 kW)
+            </p>
+            <p className="text-xs text-[#9CA3AF]">
+              Recomendado solo para flotas con kilometraje diario muy alto (&gt;200 km/día)
+            </p>
+          </div>
+          {sitio.quiereCargaRapida && (
+            <CheckCircle2 className="w-5 h-5 text-[#16A34A] ml-auto shrink-0" />
+          )}
+        </button>
+
+        {sitio.quiereCargaRapida && (
+          <div className="mt-3 flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3">
+            <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+            <p className="text-xs text-amber-700 leading-relaxed">
+              El costo de una instalación de carga rápida supera más de 10 veces el de una
+              instalación AC residencial. Solo recomendado para flotas con kilometraje diario
+              muy alto (&gt;200 km/día por vehículo).
+            </p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── Paso 6: Plan de infraestructura ──────────────────────────────────────────
+
+function Paso6({
+  plan,
+  flota,
+  seleccion,
+  onVolverAlSitio,
+}: {
+  plan: PlanInfraestructura;
+  flota: TipoVehiculo[];
+  seleccion: SeleccionTipo[];
+  onVolverAlSitio: () => void;
+}) {
+  return (
+    <div className="flex flex-col gap-7">
+      <div>
+        <h2 className="text-xl font-bold text-[#0F3D2E] mb-1">Plan de infraestructura recomendado</h2>
+        <p className="text-sm text-[#6B7280]">
+          Basado en las ventanas de operación de tu flota y las características del sitio.
+        </p>
+      </div>
+
+      {/* Resumen */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <StatCard
+          label="Cargadores AC"
+          value={`${plan.cargadoresACTotales}`}
+          sublabel={`${plan.cargadoresACTotales} × 7,4 kW`}
+          icon={<Zap className="w-4 h-4" />}
+          accent
+        />
+        {plan.cargadoresDCTotales > 0 ? (
+          <StatCard
+            label="Cargadores DC"
+            value={`${plan.cargadoresDCTotales}`}
+            sublabel={`${plan.cargadoresDCTotales} × 50 kW`}
+            icon={<Zap className="w-4 h-4" />}
+          />
+        ) : (
+          <StatCard
+            label="Cargadores DC"
+            value="—"
+            sublabel="No requerido"
+          />
+        )}
+        <StatCard
+          label="Costo estimado del plan"
+          value={formatCLPMillon(plan.costoTotal)}
+          sublabel="Referencial, incluye instalación"
+          icon={<BarChart2 className="w-4 h-4" />}
+        />
+      </div>
+
+      {/* Detalle por tipo */}
+      <div>
+        <h3 className="text-base font-bold text-[#0F3D2E] mb-3">Detalle por tipo</h3>
+        <div className="flex flex-col gap-3">
+          {plan.distribucionPorTipo.map((planTipo) => {
+            const sel = seleccion.find((s) => s.tipoId === planTipo.tipoId);
+            const tipo = flota.find((t) => t.id === planTipo.tipoId);
+            if (!tipo || !sel) return null;
+
+            return (
+              <Card key={planTipo.tipoId} padding="md">
+                <div className="flex items-start justify-between gap-3 mb-2">
+                  <div>
+                    <p className="text-sm font-semibold text-[#111827]">
+                      {tipo.etiqueta || `Tipo: ${CARROCERIA_LABEL_ES[tipo.carroceria]}`}
+                    </p>
+                    <p className="text-xs text-[#9CA3AF]">
+                      {sel.cantidadRecambio} vehículos a electrificar
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className="text-xs bg-[#DCFCE7] text-[#15803D] px-2 py-1 rounded-full font-medium">
+                      {planTipo.cargadoresAC} AC
+                    </span>
+                    {planTipo.usaDC && (
+                      <span className="text-xs bg-[#DBEAFE] text-[#1D4ED8] px-2 py-1 rounded-full font-medium">
+                        + DC
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <p className="text-xs text-[#6B7280] leading-relaxed">{planTipo.explicacion}</p>
+              </Card>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Sección DC */}
+      {plan.cargadoresDCTotales > 0 && (
+        <Card padding="md" className="border-[#DBEAFE] bg-[#EFF6FF]">
+          <div className="flex items-start gap-3">
+            <div className="w-9 h-9 rounded-xl bg-[#DBEAFE] flex items-center justify-center shrink-0">
+              <Zap className="w-4 h-4 text-[#1D4ED8]" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-[#1D4ED8] mb-1">
+                Carga rápida: {plan.cargadoresDCTotales} cargador{plan.cargadoresDCTotales > 1 ? 'es' : ''} DC (50 kW)
+              </p>
+              <p className="text-xs text-[#374151] leading-relaxed mb-2">
+                Costo estimado: {formatCLPMillon(plan.costoDC)}
+              </p>
+              <p className="text-xs text-[#6B7280] leading-relaxed">
+                ⚠ El costo de instalación DC supera más de 10 veces el de una instalación AC
+                residencial estándar (~$1,9M). Incluye equipo, obra civil y conexión eléctrica.
+                Estos valores son referenciales y sujetos a cotización especializada.
+              </p>
+            </div>
+          </div>
+        </Card>
+      )}
+
+      {/* Mensaje sin necesidad DC */}
+      {plan.mensajeDCSinNecesidad && (
+        <Card padding="md" className="border-[#BBF7D0] bg-[#F0FDF4]">
+          <div className="flex items-start gap-3">
+            <CheckCircle2 className="w-5 h-5 text-[#16A34A] shrink-0 mt-0.5" />
+            <p className="text-sm text-[#15803D]">
+              Tu operación seleccionada no requiere carga rápida; la instalación AC alcanza
+              para cubrir tu demanda diaria con las ventanas de carga disponibles.
+            </p>
+          </div>
+        </Card>
+      )}
+
+      {/* Advertencia sin DC pero con tipos intensivos */}
+      {plan.advertenciaSinDCPeroIntensivo && (
+        <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3">
+          <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+          <p className="text-xs text-amber-700 leading-relaxed">
+            Algunos tipos superan 200 km/día. Considera evaluar carga rápida —{' '}
+            <button
+              type="button"
+              onClick={onVolverAlSitio}
+              className="underline font-medium cursor-pointer"
+            >
+              puedes volver al Paso 5 para activarla
+            </button>
+            .
+          </p>
+        </div>
+      )}
+
+      {/* Desglose de costos */}
+      <Card padding="md">
+        <h3 className="text-sm font-semibold text-[#374151] mb-3">Desglose del costo estimado</h3>
+        <div className="flex flex-col gap-2 text-sm">
+          <div className="flex items-center justify-between">
+            <span className="text-[#6B7280]">Instalación AC (sitio + {plan.cargadoresACTotales} cargador{plan.cargadoresACTotales > 1 ? 'es' : ''})</span>
+            <span className="font-semibold text-[#111827]">{formatCLPMillon(plan.costoAC)}</span>
+          </div>
+          {plan.cargadoresDCTotales > 0 && (
+            <div className="flex items-center justify-between">
+              <span className="text-[#6B7280]">Instalación DC ({plan.cargadoresDCTotales} cargador{plan.cargadoresDCTotales > 1 ? 'es' : ''})</span>
+              <span className="font-semibold text-[#111827]">{formatCLPMillon(plan.costoDC)}</span>
+            </div>
+          )}
+          <div className="flex items-center justify-between border-t border-[#E5E7EB] pt-2 mt-1">
+            <span className="font-semibold text-[#374151]">Total estimado</span>
+            <span className="font-bold text-[#0F3D2E] text-base">{formatCLPMillon(plan.costoTotal)}</span>
+          </div>
+          <p className="text-[10px] text-[#9CA3AF] mt-1">
+            * Estimación referencial. No constituye cotización. Sujeta a inspección técnica en sitio.
+          </p>
+        </div>
+      </Card>
+    </div>
+  );
+}
+
 // Inicializa la flota con un tipo vacío la primera vez que entra al paso 2
 function usarFlotaConDefecto(
   flota: TipoVehiculo[],
@@ -1272,6 +1589,15 @@ export default function PymeDiagnostico() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.paso]);
 
+  // Calcula el plan de infraestructura al entrar al paso 6
+  useEffect(() => {
+    if (state.paso === 6 && state.seleccion.length > 0 && state.flota.length > 0) {
+      const plan = dimensionarInfraestructura(state.seleccion, state.flota, state.sitio);
+      set({ planInfraestructura: plan });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.paso]);
+
   // Validación del botón "Continuar" por paso
   const puedeAvanzar = (): boolean => {
     switch (state.paso) {
@@ -1324,7 +1650,23 @@ export default function PymeDiagnostico() {
           />
         );
       case 5:
+        return (
+          <Paso5
+            sitio={state.sitio}
+            onSitioChange={(s) => set({ sitio: s })}
+          />
+        );
       case 6:
+        return state.planInfraestructura ? (
+          <Paso6
+            plan={state.planInfraestructura}
+            flota={state.flota}
+            seleccion={state.seleccion}
+            onVolverAlSitio={() => set({ paso: 5 })}
+          />
+        ) : (
+          <div className="text-center py-16 text-[#9CA3AF]">Calculando plan…</div>
+        );
       case 7:
       case 8:
       case 9:

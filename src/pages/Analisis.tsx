@@ -10,13 +10,11 @@ import Button from '../components/ui/Button';
 import Badge from '../components/ui/Badge';
 import Stepper from '../components/ui/Stepper';
 import { calcularTCO, calcularAhorroMensualConModelo } from '../lib/tco';
+import { calcularRangoInstalacion } from '../lib/instalacion';
 import { formatCLP, formatCLPMillon, formatAnios } from '../lib/format';
 import {
   DIAGNOSTICO_DEFAULTS,
-  INSTALACION_BASE, INSTALACION_ACOMETIDA_REF, INSTALACION_COSTO_POR_METRO_ACOMETIDA,
-  INSTALACION_DIST_INTERNA_REF, INSTALACION_COSTO_POR_METRO_INTERNO,
-  INSTALACION_RECARGO_SOTERRADO, INSTALACION_RECARGO_EMPALME_DEDICADO,
-  INSTALACION_MARGEN_RANGO, REVENTA_COMBUSTION, TASA_MENSUAL_REFERENCIAL,
+  REVENTA_COMBUSTION, TASA_MENSUAL_REFERENCIAL,
 } from '../data/mockDefaults';
 import { MODELOS } from '../data/modelos';
 import { PROVEEDORES } from '../data/proveedores';
@@ -63,24 +61,7 @@ interface AnalisisState {
 const PASOS_LABELS = ['Carga', 'Modelos', 'Financiamiento', 'Proveedores'];
 
 // ── Estimador de instalación ──────────────────────────────────────────────────
-
-function calcularRangoInstalacion(
-  distAcometida: number,
-  distInterna: number,
-  canalizacion: AnalisisState['canalizacion'],
-  conexion: AnalisisState['conexion'],
-): { min: number; max: number } {
-  const base =
-    INSTALACION_BASE +
-    (distAcometida - INSTALACION_ACOMETIDA_REF) * INSTALACION_COSTO_POR_METRO_ACOMETIDA +
-    (distInterna   - INSTALACION_DIST_INTERNA_REF) * INSTALACION_COSTO_POR_METRO_INTERNO +
-    (canalizacion === 'soterrada' ? INSTALACION_RECARGO_SOTERRADO : 0) +
-    (conexion     === 'dedicado'  ? INSTALACION_RECARGO_EMPALME_DEDICADO : 0);
-  const piso = Math.max(base, 1_200_000);
-  const min  = Math.round(piso * (1 - INSTALACION_MARGEN_RANGO) / 1000) * 1000;
-  const max  = Math.round(piso * (1 + INSTALACION_MARGEN_RANGO) / 1000) * 1000;
-  return { min, max };
-}
+// calcularRangoInstalacion se importa de lib/instalacion.ts
 
 interface Vista1Props {
   infoCarga: InfoCarga;
